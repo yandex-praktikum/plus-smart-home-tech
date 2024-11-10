@@ -138,8 +138,96 @@ jobs:
             echo "Github target '$GITHUB_BASE_REF' - OK"
             exit
           fi
-          echo "Correct branch name '$GITHUB_HEAD_REF' according to the spec, allowed: 1-collector-json, 2-collector-grpc, 3-aggregator, 4-analyzer, develop"
-          echo "Исправьте пожалуйста имя ветки '$GITHUB_HEAD_REF' согласно заданию, разрешены: 1-collector-json, 2-collector-grpc, 3-aggregator, 4-analyzer, develop"
+          if [[ "$GITHUB_HEAD_REF" == "5-config-server" ]] 
+          then
+            echo "Config server - OK"
+            PULL=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28"  /repos/${GITHUB_REPOSITORY}/pulls?head=${GITHUB_REPOSITORY_OWNER}:develop || true)
+            OPEN=$(jq '. | length' <<< "$PULL")
+            if [[ "$OPEN" != "0" && "$GITHUB_REPOSITORY_OWNER" != "praktikum-java" ]]
+            then
+              PULL_URL=$(jq '.[0].html_url' <<< "$PULL")
+              echo "Merge the 4-analyzer branch pull request: ${PULL_URL}"
+              echo "Объедините pull request ветки 4-analyzer: ${PULL_URL}"
+              exit -6
+            fi
+            echo "Analyzer service - Merged"
+            if [[ "$GITHUB_BASE_REF" != "main" && "$GITHUB_REPOSITORY_OWNER" != "praktikum-java" ]]
+            then
+              echo "Set the pull request to merge branch 'main' (instead of '$GITHUB_BASE_REF')"
+              echo "Задайте в Pull request ветку слияния 'main' (вместо '$GITHUB_BASE_REF')"
+              exit -2
+            fi
+            echo "Github target '$GITHUB_BASE_REF' - OK"
+            exit
+          fi
+          if [[ "$GITHUB_HEAD_REF" == "6-discovery-server" ]] 
+          then
+            echo "Discovery server - OK"
+            PULL=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28"  /repos/${GITHUB_REPOSITORY}/pulls?head=${GITHUB_REPOSITORY_OWNER}:5-config-server || true)
+            OPEN=$(jq '. | length' <<< "$PULL")
+            if [[ "$OPEN" != "0" && "$GITHUB_REPOSITORY_OWNER" != "praktikum-java" ]]
+            then
+              PULL_URL=$(jq '.[0].html_url' <<< "$PULL")
+              echo "Merge the 5-config-server branch pull request: ${PULL_URL}"
+              echo "Объедините pull request ветки 5-config-server: ${PULL_URL}"
+              exit -7
+            fi
+            echo "Config server - Merged"
+            if [[ "$GITHUB_BASE_REF" != "main" && "$GITHUB_REPOSITORY_OWNER" != "praktikum-java" ]]
+            then
+              echo "Set the pull request to merge branch 'main' (instead of '$GITHUB_BASE_REF')"
+              echo "Задайте в Pull request ветку слияния 'main' (вместо '$GITHUB_BASE_REF')"
+              exit -2
+            fi
+            echo "Github target '$GITHUB_BASE_REF' - OK"
+            exit
+          fi
+          if [[ "$GITHUB_HEAD_REF" == "7-spring-cloud-microservices" ]] 
+          then
+            echo "Cloud microservices - OK"
+            PULL=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28"  /repos/${GITHUB_REPOSITORY}/pulls?head=${GITHUB_REPOSITORY_OWNER}:6-discovery-server || true)
+            OPEN=$(jq '. | length' <<< "$PULL")
+            if [[ "$OPEN" != "0" && "$GITHUB_REPOSITORY_OWNER" != "praktikum-java" ]]
+            then
+              PULL_URL=$(jq '.[0].html_url' <<< "$PULL")
+              echo "Merge the 6-discovery-server branch pull request: ${PULL_URL}"
+              echo "Объедините pull request ветки 6-discovery-server: ${PULL_URL}"
+              exit -8
+            fi
+            echo "Discovery server - Merged"
+            if [[ "$GITHUB_BASE_REF" != "main" && "$GITHUB_REPOSITORY_OWNER" != "praktikum-java" ]]
+            then
+              echo "Set the pull request to merge branch 'main' (instead of '$GITHUB_BASE_REF')"
+              echo "Задайте в Pull request ветку слияния 'main' (вместо '$GITHUB_BASE_REF')"
+              exit -2
+            fi
+            echo "Github target '$GITHUB_BASE_REF' - OK"
+            exit
+          fi
+          if [[ "$GITHUB_HEAD_REF" == "8-gateway-lb" ]] 
+          then
+            echo "API Gateway - OK"
+            PULL=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28"  /repos/${GITHUB_REPOSITORY}/pulls?head=${GITHUB_REPOSITORY_OWNER}:7-spring-cloud-microservices || true)
+            OPEN=$(jq '. | length' <<< "$PULL")
+            if [[ "$OPEN" != "0" && "$GITHUB_REPOSITORY_OWNER" != "praktikum-java" ]]
+            then
+              PULL_URL=$(jq '.[0].html_url' <<< "$PULL")
+              echo "Merge the 7-spring-cloud-microservices branch pull request: ${PULL_URL}"
+              echo "Объедините pull request ветки 7-spring-cloud-microservices: ${PULL_URL}"
+              exit -9
+            fi
+            echo "Cloud microservices - Merged"
+            if [[ "$GITHUB_BASE_REF" != "main" && "$GITHUB_REPOSITORY_OWNER" != "praktikum-java" ]]
+            then
+              echo "Set the pull request to merge branch 'main' (instead of '$GITHUB_BASE_REF')"
+              echo "Задайте в Pull request ветку слияния 'main' (вместо '$GITHUB_BASE_REF')"
+              exit -2
+            fi
+            echo "Github target '$GITHUB_BASE_REF' - OK"
+            exit
+          fi
+          echo "Correct branch name '$GITHUB_HEAD_REF' according to the spec, allowed: 1-collector-json, 2-collector-grpc, 3-aggregator, 4-analyzer, develop, 5-config-server, 6-discovery-server, 7-spring-cloud-microservices, 8-gateway-lb"
+          echo "Исправьте пожалуйста имя ветки '$GITHUB_HEAD_REF' согласно заданию, разрешены: 1-collector-json, 2-collector-grpc, 3-aggregator, 4-analyzer, develop, 5-config-server, 6-discovery-server, 7-spring-cloud-microservices, 8-gateway-lb"
           exit -1
         env:
           GH_TOKEN: ${{ github.token }}
