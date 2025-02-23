@@ -1,13 +1,14 @@
-name: Explore With Me API Tests
+name: Smart Home Tech Tests
 
 on:
+  workflow_dispatch:
   pull_request:
   workflow_call:
 
 jobs:
   check-repo:
     runs-on: ubuntu-latest
-
+    if: ${{ github.event_name == 'pull_request' }}
     steps:
       - name: Check repo not fork and public
         run: |
@@ -270,13 +271,19 @@ jobs:
             echo "Pull request содержит файл checkstyle.xml, его изменять нельзя. Удалите его из PR"
             exit -2
           fi
+          if [[ "$FILENAMES"  =~ "hub-router.jar" ]]
+          then
+            echo "The pull request contains the hub-router.jar file and cannot be modified. Remove it from PR"
+            echo "Pull request содержит файл hub-router.jar, его изменять нельзя. Удалите его из PR"
+            exit -3
+          fi
           if [[ "$FILENAMES"  =~ ".class" ]] || [[ "$FILENAMES"  =~ ".jar" ]] || [[ "$FILENAMES"  =~ "mvn" ]] || [[ "$FILENAMES"  =~ ".DS_Store" ]] \
           || [[ "$FILENAMES"  =~ ".idea" ]] || [[ "$FILENAMES"  =~ ".iws" ]] || [[ "$FILENAMES"  =~ ".iml" ]] || [[ "$FILENAMES"  =~ ".ipr" ]] \
           || [[ "$FILENAMES"  =~ ".db" ]] || [[ "$FILENAMES"  =~ ".log" ]] || [[ "$FILENAMES"  =~ "out/" ]] || [[ "$FILENAMES"  =~ "target/" ]]
           then
             echo "The pull request contains the binary files. Remove them (*.class, *.jar, *.DS_Store ...) from PR"
             echo "Pull request содержит двоичные файлы. Удалите их (*.class, *.jar, *.DS_Store ...) из PR"
-            exit -3
+            exit -4
           fi
           echo "PR files - OK"
           exit
@@ -284,11 +291,10 @@ jobs:
           PULL_NUMBER: ${{ github.event.number }}
           GH_TOKEN: ${{ github.token }}
 
-  build-ewm:
-
+  build-and-test:
     needs: check-repo
+    if: always() && needs.check-repo.result != 'failure'
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout target repo
         uses: actions/checkout@v4
@@ -300,6 +306,169 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
       - name: Check and Build application
         run: |
-          mvn verify --no-transfer-progress
+          mvn clean install -DskipTests --no-transfer-progress
+
+      - name: Checkout tests
+        uses: actions/checkout@v4
+        with:
+          repository: 'yandex-praktikum/plus-smart-home-tech'
+          ref: ${{ github.event.pull_request.head.ref }}
+          path: tests
+
+      - name: Start infrastructure for telemetry services
+        if: |
+          contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer"]'), github.ref_name) || 
+          contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer"]'), github.head_ref)
+        run: |
+          if [ -f "docker-compose.yaml" ]; then
+            docker compose -f docker-compose.yaml up --detach
+          elif [ -f "compose.yaml" ]; then
+            docker compose -f compose.yaml up --detach
+          elif [ -f "docker-compose.yml" ]; then
+            docker compose -f docker-compose.yml up --detach
+          else
+            echo "Не найден файл docker-compose.yaml!"
+            exit 1
+          fi
+          chmod a+x ./tests/.github/workflows/wait-for-it.sh
+          ./tests/.github/workflows/wait-for-it.sh localhost:9092 --timeout=60 --strict -- echo "Kafka is up"
+          docker compose ps
+          docker compose logs
+
+      - name: Verify JAR files and Start Telemetry Services
+        if: |
+          contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer"]'), github.ref_name) || 
+          contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer"]'), github.head_ref)
+        run: |
+          echo "Проверка наличия JAR-файлов и запуск нужных сервисов..."
+          
+          # Проверяем наличие JAR-файлов
+          COLLECTOR_JAR=$(find ./ -name "*collector*.jar" | head -n 1)
+          AGGREGATOR_JAR=$(find ./ -name "*aggregator*.jar" | head -n 1)
+          ANALYZER_JAR=$(find ./ -name "*analyzer*.jar" | head -n 1)
+          
+          echo "Найденные JAR-файлы:"
+          echo "Collector: $COLLECTOR_JAR"
+          echo "Aggregator: $AGGREGATOR_JAR"
+          echo "Analyzer: $ANALYZER_JAR"
+          
+          # Определяем ветку
+          BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF##*/}}
+          echo "Текущая ветка: $BRANCH_NAME"
+          
+          # Логика запуска в зависимости от ветки
+          case "$BRANCH_NAME" in
+            "1-collector-json")
+              if [ -z "$COLLECTOR_JAR" ]; then
+                echo "Ошибка: JAR-файл для сервиса Collector не найден."
+                exit 1
+              fi
+              echo "Запуск сервиса Collector..."
+              nohup java -jar $COLLECTOR_JAR --server.port=8080 --logging.file.name=./logs/collector.log &
+              ;;
+            "2-collector-grpc")
+              if [ -z "$COLLECTOR_JAR" ]; then
+                echo "Ошибка: JAR-файл для сервиса Collector не найден."
+                exit 1
+              fi
+              echo "Запуск сервиса Collector..."
+              nohup java -jar $COLLECTOR_JAR --grpc.server.port=59091 --logging.file.name=./logs/collector.log &
+              ;;
+            "3-aggregator")
+              if [ -z "$COLLECTOR_JAR" ] || [ -z "$AGGREGATOR_JAR" ]; then
+                echo "Ошибка: Не найдены JAR-файлы для сервиса Collector и/или сервиса Aggregator."
+                exit 1
+              fi
+              echo "Запуск Collector..."
+              nohup java -jar $COLLECTOR_JAR --grpc.server.port=59091 --logging.file.name=./logs/collector.log &
+              ./tests/.github/workflows/wait-for-it.sh localhost:59091 --timeout=30 --strict -- echo "Collector is up"
+              echo "Запуск Aggregator..."
+              nohup java -jar $AGGREGATOR_JAR --logging.file.name=./logs/aggregator.log &
+              ;;
+            "4-analyzer")
+              if [ -z "$COLLECTOR_JAR" ] || [ -z "$AGGREGATOR_JAR" ] || [ -z "$ANALYZER_JAR" ]; then
+                echo "Ошибка: Не найдены JAR-файлы для сервисов Collector, Aggregator и/или Analyzer."
+                exit 1
+              fi
+              echo "Запуск Collector..."
+              nohup java -jar $COLLECTOR_JAR --grpc.server.port=59091 --logging.file.name=./logs/collector.log &
+              ./tests/.github/workflows/wait-for-it.sh localhost:59091 --timeout=30 --strict -- echo "Collector is up"
+              echo "Запуск Aggregator..."
+              nohup java -jar $AGGREGATOR_JAR --logging.file.name=./logs/aggregator.log &
+              echo "Запуск Analyzer..."
+              nohup java -jar $ANALYZER_JAR --logging.file.name=./logs/analyzer.log &
+              ;;
+            *)
+              echo "Ошибка: Ветка $BRANCH_NAME не поддерживается этим workflow."
+              exit 1
+              ;;
+          esac
+          
+          # Дожидаемся готовности микросервисов
+          echo "Ожидание готовности микросервисов..."
+          sleep 20
+
+      - name: Test Telemetry Services
+        if: |
+          contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer"]'), github.ref_name) || 
+          contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer"]'), github.head_ref)
+        run: |
+          BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF##*/}}
+          
+          echo "Запуск сервиса Hub Router с настройками для ветки $BRANCH_NAME"
+          
+          # Определяем параметры запуска hub-router
+          CONFIG_ARGS="--hub-router.execution.immediate-logging.enabled=false --hub-router.execution.output.only-errors=false --hub-router.execution.output.print=true --hub-router.execution.output.file=true"
+          case "$BRANCH_NAME" in
+            "1-collector-json")
+              CONFIG_ARGS="$CONFIG_ARGS --hub-router.execution.collector.mode=http --hub-router.execution.collector.port=8080 --hub-router.execution.mode=COLLECTION"
+              ;;
+            "2-collector-grpc")
+              CONFIG_ARGS="$CONFIG_ARGS --hub-router.execution.collector.port=59091 --hub-router.execution.mode=COLLECTION"
+              ;;
+            "3-aggregator")
+              CONFIG_ARGS="$CONFIG_ARGS --hub-router.execution.collector.port=59091 --hub-router.execution.mode=AGGREGATION"
+              ;;
+            "4-analyzer")
+              CONFIG_ARGS="$CONFIG_ARGS --hub-router.execution.collector.port=59091 --hub-router.execution.mode=ANALYZE"
+              ;;
+            *)
+              echo "Ошибка: Ветка $BRANCH_NAME не поддерживается для тестов."
+              exit 1
+              ;;
+          esac
+          
+          # Запуск hub-router с нужными аргументами
+          java -jar ./tests/.github/workflows/hub-router.jar $CONFIG_ARGS
+        continue-on-error: false
+
+      - name: Capture Status
+        if: always()
+        run: echo "STATUS=$?" >> $GITHUB_ENV
+
+      - name: Compose down
+        if: always()
+        run: docker compose down
+
+      - name: Upload execution log artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-and-execution-report
+          path: |
+            execution-report.txt
+            ./logs/*.log
+
+      - name: Success
+        if: env.STATUS == '0'
+        run: echo "Проверка прошла успешно!"
