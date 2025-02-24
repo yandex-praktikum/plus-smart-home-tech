@@ -428,7 +428,7 @@ jobs:
           echo "Запуск сервиса Hub Router с настройками для ветки $BRANCH_NAME"
           
           # Определяем параметры запуска hub-router
-          CONFIG_ARGS="--hub-router.execution.immediate-logging.enabled=false --hub-router.execution.output.only-errors=false --hub-router.execution.output.print=true --hub-router.execution.output.file=true"
+          CONFIG_ARGS="--hub-router.execution.immediate-logging.enabled=false --hub-router.execution.output.trace-enabled=false --hub-router.execution.output.print=true --hub-router.execution.output.file=true"
           case "$BRANCH_NAME" in
             "1-collector-json")
               CONFIG_ARGS="$CONFIG_ARGS --hub-router.execution.collector.mode=http --hub-router.execution.collector.port=8080 --hub-router.execution.mode=COLLECTION"
