@@ -327,8 +327,8 @@ jobs:
 
       - name: Start infrastructure for telemetry services
         if: |
-          contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer"]'), github.ref_name) || 
-          contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer"]'), github.head_ref)
+          contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer", "develop"]'), github.ref_name) || 
+          contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer", "develop"]'), github.head_ref)
         run: |
           if [ -f "docker-compose.yaml" ]; then
             docker compose -f docker-compose.yaml up --detach
@@ -347,8 +347,8 @@ jobs:
 
       - name: Verify JAR files and Start Telemetry Services
         if: |
-          contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer"]'), github.ref_name) || 
-          contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer"]'), github.head_ref)
+          contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer", "develop"]'), github.ref_name) || 
+          contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer", "develop"]'), github.head_ref)
         run: |
           echo "Проверка наличия JAR-файлов и запуск нужных сервисов..."
           
@@ -408,6 +408,19 @@ jobs:
               echo "Запуск Analyzer..."
               nohup java -jar $ANALYZER_JAR --logging.file.name=./logs/analyzer.log &
               ;;
+            "develop")
+              if [ -z "$COLLECTOR_JAR" ] || [ -z "$AGGREGATOR_JAR" ] || [ -z "$ANALYZER_JAR" ]; then
+                echo "Ошибка: Не найдены JAR-файлы для сервисов Collector, Aggregator и/или Analyzer."
+                exit 1
+              fi
+              echo "Запуск Collector..."
+              nohup java -jar $COLLECTOR_JAR --grpc.server.port=59091 --logging.file.name=./logs/collector.log &
+              ./tests/.github/workflows/wait-for-it.sh localhost:59091 --timeout=30 --strict -- echo "Collector is up"
+              echo "Запуск Aggregator..."
+              nohup java -jar $AGGREGATOR_JAR --logging.file.name=./logs/aggregator.log &
+              echo "Запуск Analyzer..."
+              nohup java -jar $ANALYZER_JAR --logging.file.name=./logs/analyzer.log &
+              ;;
             *)
               echo "Ошибка: Ветка $BRANCH_NAME не поддерживается этим workflow."
               exit 1
@@ -420,8 +433,8 @@ jobs:
 
       - name: Test Telemetry Services
         if: |
-          contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer"]'), github.ref_name) || 
-          contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer"]'), github.head_ref)
+          contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer", "develop"]'), github.ref_name) || 
+          contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer", "develop"]'), github.head_ref)
         run: |
           BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF##*/}}
           
@@ -440,6 +453,9 @@ jobs:
               CONFIG_ARGS="$CONFIG_ARGS --hub-router.execution.collector.port=59091 --hub-router.execution.mode=AGGREGATION"
               ;;
             "4-analyzer")
+              CONFIG_ARGS="$CONFIG_ARGS --hub-router.execution.collector.port=59091 --hub-router.execution.mode=ANALYZE"
+              ;;
+            "develop")
               CONFIG_ARGS="$CONFIG_ARGS --hub-router.execution.collector.port=59091 --hub-router.execution.mode=ANALYZE"
               ;;
             *)
