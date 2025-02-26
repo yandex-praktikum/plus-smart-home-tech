@@ -1,0 +1,128 @@
+name: Smart Home Tech Tests (v2)
+
+on:
+  workflow_dispatch:
+    inputs:
+      verbose_mode:
+        description: "Включить подробные логи во время тестов"
+        required: false
+        default: false
+        type: boolean
+      print_logs:
+        description: "Включить вывод логов в консоль"
+        required: false
+        default: false
+        type: boolean
+  workflow_call:
+    inputs:
+      verbose_mode:
+        required: false
+        type: string
+        default: "false"
+      print_logs:
+        required: false
+        type: string
+        default: "false"
+
+env:
+  VERBOSE_MODE: ${{ inputs.verbose_mode }}
+  PRINT_LOGS: ${{ inputs.print_logs }}
+  STUFF_PATH: .github/workflows/stuff
+  LOG_DIR: ./logs
+
+jobs:
+  check-repo:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'pull_request' }}
+    steps:
+      - name: Checkout workflow stuff from main branch
+        run: |
+          git init
+          git fetch --depth=1 origin ci
+          git checkout origin/ci -- $STUFF_PATH
+          chmod +x ${STUFF_PATH}/scripts/*.sh
+
+      - name: Check repo not fork and public
+        run: ${STUFF_PATH}/scripts/check-repo.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Check branch name
+        run: ${STUFF_PATH}/scripts/check-branch.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Check files
+        run: ${STUFF_PATH}/scripts/check-files.sh
+        env:
+          PULL_NUMBER: ${{ github.event.number }}
+          GH_TOKEN: ${{ github.token }}
+
+  build-and-test:
+    needs: check-repo
+    if: always() && needs.check-repo.result != 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target repo
+        uses: actions/checkout@v4
+
+      - name: Checkout workflow stuff from main branch
+        run: |
+          rm -rf $STUFF_PATH
+          git fetch origin ci
+          git checkout origin/ci -- $STUFF_PATH
+          chmod +x ${STUFF_PATH}/scripts/*.sh
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Check and Build application
+        run: |
+          mvn clean install -DskipTests --no-transfer-progress
+
+      - name: Start infrastructure
+        run: ${STUFF_PATH}/scripts/start-infra.sh
+
+      - name: Verify JAR files and Start Telemetry Services
+        if: |
+          contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer", "develop"]'), github.ref_name) || 
+          contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer", "develop"]'), github.head_ref)
+        run: ${STUFF_PATH}/scripts/start-telemetry.sh
+
+      - name: Test Telemetry Services
+        id: test
+        if: |
+          contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer", "develop"]'), github.ref_name) || 
+          contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer", "develop"]'), github.head_ref)
+        run: ${STUFF_PATH}/scripts/run-tests.sh
+        continue-on-error: false
+
+      - name: Capture Exit Status
+        if: always()
+        run: echo "STATUS=${{ steps.test.outcome }}" >> $GITHUB_ENV
+
+      - name: Compose down
+        if: always()
+        run: |
+          echo "📂 Завершаем работу инфраструктуры..."
+          mkdir -p "$LOG_DIR"
+          docker compose logs > "$LOG_DIR/docker-compose.log" 2>&1
+          docker compose down
+
+      - name: Upload execution log artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-and-execution-report
+          path: |
+            execution-report.txt
+            ./logs/*.log
+
+      - name: Fail if Tests Failed
+        if: env.STATUS != 'success'
+        run: |
+          echo "❌ Тесты завершились с ошибками!"
+          exit 1
