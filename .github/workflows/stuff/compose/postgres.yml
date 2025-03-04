@@ -1,0 +1,18 @@
+services:
+  postgres:
+    image: postgres:16.1
+    container_name: postgres
+    hostname: postgres
+    environment:
+      POSTGRES_USER: dbuser
+      POSTGRES_PASSWORD: 12345
+      POSTGRES_DB: telemetry_analyzer
+    healthcheck:
+      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 10
+    #    volumes:
+    #      - postgres:/data/postgres
+    ports:
+      - "5432:5432"

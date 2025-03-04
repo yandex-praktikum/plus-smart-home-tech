@@ -45,14 +45,9 @@ case "$BRANCH_NAME" in
 esac
 
 echo "🚀 Running: java -jar $HUB_ROUTER_JAR $CONFIG_ARGS"
+java -jar "$HUB_ROUTER_JAR" $CONFIG_ARGS | tee "${LOG_DIR}/hub-router.log"
 
-if [[ "$PRINT_LOGS" == "true" ]]; then
-    java -jar "$HUB_ROUTER_JAR" $CONFIG_ARGS | tee "${LOG_DIR}/hub-router.log"
-    EXIT_CODE=${PIPESTATUS[0]}  # Берем код завершения первой команды (java)
-else
-    java -jar "$HUB_ROUTER_JAR" $CONFIG_ARGS > "${LOG_DIR}/hub-router.log" 2>&1
-    EXIT_CODE=$?
-fi
+EXIT_CODE=${PIPESTATUS[0]}  # Берем код завершения первой команды (java)
 
 if [[ $EXIT_CODE -ne 0 ]]; then
     echo "❌ Ошибка: во время выполнения hub-router было обнаружено $EXIT_CODE ошибок"
