@@ -37,19 +37,40 @@ on:
 env:
   VERBOSE_MODE: ${{ inputs.verbose_mode }}
   PRINT_LOGS: ${{ inputs.print_logs }}
-  STUFF_PATH: .github/workflows/stuff
   LOG_DIR: ./logs
+  STUFF_REPO: "https://github.com/yandex-praktikum/plus-smart-home-tech.git"
+  STUFF_BRANCH: "ci"
+  STUFF_PATH: .github/workflows/stuff
 
 jobs:
   check-repo:
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'pull_request' }}
     steps:
-      - name: Checkout workflow stuff from main branch
+      - name: Checkout workflow stuff
         run: |
+          # Создаем временную папку
+          mkdir -p temp_checkout
+          cd temp_checkout
+
+          # Инициализируем git и настраиваем sparse-checkout
           git init
-          git fetch --depth=1 origin ci
-          git checkout origin/ci -- $STUFF_PATH
+          git remote add origin "$STUFF_REPO"
+          git config core.sparseCheckout true
+          echo "$STUFF_PATH/*" >> .git/info/sparse-checkout
+
+          # Клонируем только нужную папку
+          git pull --depth=1 origin "$STUFF_BRANCH"
+
+          # Перемещаем файлы в корень рабочего пространства
+          mv "${STUFF_PATH}" "../${STUFF_PATH}"
+          
+          ls -la "../${STUFF_PATH}"
+          
+          # Выходим из временной папки и удаляем её
+          cd ..
+          rm -rf temp_checkout
+          # Даём разрешения на выполнение скриптов
           chmod +x ${STUFF_PATH}/scripts/*.sh
 
       - name: Check repo not fork and public
@@ -75,13 +96,8 @@ jobs:
     steps:
       - name: Checkout target repo
         uses: actions/checkout@v4
-
-      - name: Checkout workflow stuff from main branch
-        run: |
-          rm -rf $STUFF_PATH
-          git fetch origin ci
-          git checkout origin/ci -- $STUFF_PATH
-          chmod +x ${STUFF_PATH}/scripts/*.sh
+        with:
+          fetch-depth: 1  # Оптимизируем скорость
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -92,6 +108,32 @@ jobs:
       - name: Check and Build application
         run: |
           mvn clean install -DskipTests --no-transfer-progress
+
+      - name: Checkout workflow stuff
+        run: |
+          # Создаем временную папку
+          mkdir -p temp_checkout
+          cd temp_checkout
+
+          # Инициализируем git и настраиваем sparse-checkout
+          git init
+          git remote add origin "$STUFF_REPO"
+          git config core.sparseCheckout true
+          echo "$STUFF_PATH/*" >> .git/info/sparse-checkout
+
+          # Клонируем только нужную папку
+          git pull --depth=1 origin "$STUFF_BRANCH"
+
+          # Перемещаем файлы в корень рабочего пространства
+          mv "${STUFF_PATH}" "../${STUFF_PATH}"
+
+          ls -la "../${STUFF_PATH}"
+
+          # Выходим из временной папки и удаляем её
+          cd ..
+          rm -rf temp_checkout
+          # Даём разрешения на выполнение скриптов
+          chmod +x ${STUFF_PATH}/scripts/*.sh
 
       - name: Start infrastructure
         run: ${STUFF_PATH}/scripts/start-infra.sh

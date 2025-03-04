@@ -10,11 +10,27 @@ WAIT_FOR_IT="$(dirname "$0")/wait-for-it.sh"
 LOG_DIR="${LOG_DIR:-./logs}"
 mkdir -p "$LOG_DIR"
 
-# Проверяем наличие JAR-файлов
-COLLECTOR_JAR=$(find ./ -name "*collector*.jar" | head -n 1)
-AGGREGATOR_JAR=$(find ./ -name "*aggregator*.jar" | head -n 1)
-ANALYZER_JAR=$(find ./ -name "*analyzer*.jar" | head -n 1)
+# Функция поиска правильного JAR'ника
+find_jar() {
+  local service=$1
+  local jar_path
 
+  # Ищем *-boot.jar сначала
+  jar_path=$(find ./ -name "${service}-*-boot.jar" | head -n 1)
+  if [ -z "$jar_path" ]; then
+    # Если нет boot-версии, ищем обычный JAR
+    jar_path=$(find ./ -name "${service}-*.jar" | head -n 1)
+  fi
+
+  echo "$jar_path"
+}
+
+# Определяем JAR-файлы
+COLLECTOR_JAR=$(find_jar "collector")
+AGGREGATOR_JAR=$(find_jar "aggregator")
+ANALYZER_JAR=$(find_jar "analyzer")
+
+# Выводим найденные файлы
 echo "Найденные JAR-файлы:"
 echo "Collector: $COLLECTOR_JAR"
 echo "Aggregator: $AGGREGATOR_JAR"
@@ -49,7 +65,10 @@ start_service() {
 check_collector() {
   local collector_port=$1
 
-  $WAIT_FOR_IT localhost:${collector_port} --timeout=10 --strict -- echo "✅ Collector is up and ready"
+  # Проверка, существует ли wait-for-it.sh
+  if [ -f "$WAIT_FOR_IT" ]; then
+    $WAIT_FOR_IT localhost:${collector_port} --timeout=10 --strict -- echo "✅ Collector is up and ready"
+  fi
 }
 
 # Логика запуска в зависимости от ветки
@@ -74,10 +93,10 @@ case "$BRANCH_NAME" in
     check_collector "59091"
     ;;
   "develop")
-      start_service "collector" "$COLLECTOR_JAR" "--grpc.server.port=59091"
-      start_service "aggregator" "$AGGREGATOR_JAR" ""
-      start_service "analyzer" "$ANALYZER_JAR" ""
-      check_collector "59091"
+    start_service "collector" "$COLLECTOR_JAR" "--grpc.server.port=59091"
+    start_service "aggregator" "$AGGREGATOR_JAR" ""
+    start_service "analyzer" "$ANALYZER_JAR" ""
+    check_collector "59091"
     ;;
   *)
     echo "❌ Ошибка: Ветка $BRANCH_NAME не поддерживается этим workflow."

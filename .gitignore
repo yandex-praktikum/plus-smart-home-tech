@@ -1,3 +1,6 @@
+# excluding hub-router.jar
+!./.github/workflows/staf/hub-router.jar
+
 ### IntelliJ IDEA ###
 .idea/
 **/.idea/
