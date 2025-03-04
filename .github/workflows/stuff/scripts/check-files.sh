@@ -5,11 +5,7 @@ PULL=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version:
 
 FILENAMES=$(jq -r '.[].filename' <<< "$PULL")
 
-declare -A FORBIDDEN_FILES=(
-  "api-tests.yml",
-  "checkstyle.xml",
-  "hub-router.jar"
-)
+FORBIDDEN_FILES=("api-tests.yml" "checkstyle.xml" "hub-router.jar")
 
 for FILE in "${FORBIDDEN_FILES[@]}"; do
   if grep -q "$FILE" <<< "$FILENAMES"; then
