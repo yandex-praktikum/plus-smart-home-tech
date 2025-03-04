@@ -64,8 +64,8 @@ jobs:
           
           mkdir -p "../${STUFF_PATH}"
           
-          # Перемещаем файлы в корень рабочего пространства
-          mv "${STUFF_PATH}" "../${STUFF_PATH}"
+          # Перемещаем файлы в папку stuff
+          mv "${STUFF_PATH}"/* "../${STUFF_PATH}/"
           
           ls -la "../${STUFF_PATH}"
           
@@ -128,8 +128,8 @@ jobs:
           
           mkdir -p "../${STUFF_PATH}"
 
-          # Перемещаем файлы в корень рабочего пространства
-          mv "${STUFF_PATH}" "../${STUFF_PATH}"
+          # Перемещаем файлы в папку stuff
+          mv "${STUFF_PATH}"/* "../${STUFF_PATH}/"
 
           ls -la "../${STUFF_PATH}"
 
