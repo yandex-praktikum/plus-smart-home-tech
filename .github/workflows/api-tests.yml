@@ -61,7 +61,9 @@ jobs:
 
           # Клонируем только нужную папку
           git pull --depth=1 origin "$STUFF_BRANCH"
-
+          
+          mkdir -p "../${STUFF_PATH}"
+          
           # Перемещаем файлы в корень рабочего пространства
           mv "${STUFF_PATH}" "../${STUFF_PATH}"
           
@@ -123,6 +125,8 @@ jobs:
 
           # Клонируем только нужную папку
           git pull --depth=1 origin "$STUFF_BRANCH"
+          
+          mkdir -p "../${STUFF_PATH}"
 
           # Перемещаем файлы в корень рабочего пространства
           mv "${STUFF_PATH}" "../${STUFF_PATH}"
