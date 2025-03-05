@@ -83,9 +83,15 @@ case "$BRANCH_NAME" in
     check_target_branch "main"
     ;;
 
+  "9-gateway-microservices")
+    echo "✅ API Gateway microservices - OK"
+    check_prerequisite_branch "9-gateway-microservices" "8-gateway" 11
+    check_target_branch "main"
+    ;;
+
   *)
     echo "❌ Unknown branch: $BRANCH_NAME"
-    exit 11
+    exit 12
     ;;
 esac
 
