@@ -22,7 +22,13 @@ fi
 echo "🔧 Используемые файлы Docker Compose: $COMPOSE_FILES"
 
 echo "🚀 Запуск инфраструктуры..."
-docker compose -f $COMPOSE_FILES up --detach
+docker compose -f $COMPOSE_FILES up --detach --wait --quiet-pull
+
+echo "📂 Сохранение логов в $LOG_DIR..."
+docker compose logs > "$LOG_DIR/docker-compose.log" 2>&1
+
+echo "📋 Статус docker compose:"
+docker compose -f $COMPOSE_FILES ps
 
 echo "⏳ Ожидание запуска сервисов..."
 if [[ "$COMPOSE_FILES" == *"kafka.yml"* ]]; then
