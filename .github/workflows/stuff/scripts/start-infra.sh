@@ -25,7 +25,7 @@ fi
 echo "🔧 Используемые файлы Docker Compose: $COMPOSE_FILES"
 
 echo "🚀 Запуск инфраструктуры..."
-docker compose -f $COMPOSE_FILES up --detach --wait --quiet-pull
+docker compose -f $COMPOSE_FILES up --detach --wait --quiet-pull || true
 
 # для отладки
 docker compose logs > "$LOG_DIR/docker-compose.log" 2>&1
