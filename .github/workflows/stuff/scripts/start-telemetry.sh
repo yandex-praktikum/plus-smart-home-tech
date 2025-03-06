@@ -25,6 +25,11 @@ find_jar() {
   echo "$jar_path"
 }
 
+# Для сервисов работающих с бд
+POSTGRES_USER=${POSTGRES_USER:-postgres}
+POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+POSTGRES_PORT=${POSTGRES_PORT:-5432}
+
 # Определяем JAR-файлы
 COLLECTOR_JAR=$(find_jar "collector")
 AGGREGATOR_JAR=$(find_jar "aggregator")
@@ -95,7 +100,10 @@ case "$BRANCH_NAME" in
   "develop")
     start_service "collector" "$COLLECTOR_JAR" "--grpc.server.port=59091"
     start_service "aggregator" "$AGGREGATOR_JAR" ""
-    start_service "analyzer" "$ANALYZER_JAR" ""
+    start_service "analyzer" "$ANALYZER_JAR" \
+      "--spring.datasource.url=jdbc:postgresql://localhost:${POSTGRES_PORT}/telemetry_analyzer \
+       --spring.datasource.username=${POSTGRES_USER} \
+       --spring.datasource.password=${POSTGRES_PASSWORD}"
     check_collector "59091"
     ;;
   *)

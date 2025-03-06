@@ -41,6 +41,9 @@ env:
   STUFF_REPO: "https://github.com/yandex-praktikum/plus-smart-home-tech.git"
   STUFF_BRANCH: "ci"
   STUFF_PATH: .github/workflows/stuff
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: password
+  POSTGRES_PORT: 5432
 
 jobs:
   check-repo:

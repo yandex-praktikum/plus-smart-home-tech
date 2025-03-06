@@ -7,6 +7,9 @@ BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF##*/}}
 LOG_DIR="${LOG_DIR:-./logs}"
 mkdir -p "$LOG_DIR"
 
+POSTGRES_USER=${POSTGRES_USER:-postgres}
+POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+POSTGRES_PORT=${POSTGRES_PORT:-5432}
 
 # Определяем, какие docker-compose файлы использовать
 COMPOSE_FILES="$COMPOSE_PATH/docker-compose.yml" # в docker-compose.yml можно поместить настройки актуальные для всех веток
@@ -24,10 +27,8 @@ echo "🔧 Используемые файлы Docker Compose: $COMPOSE_FILES"
 echo "🚀 Запуск инфраструктуры..."
 docker compose -f $COMPOSE_FILES up --detach --wait --quiet-pull
 
-echo "📂 Сохранение логов в $LOG_DIR..."
+# для отладки
 docker compose logs > "$LOG_DIR/docker-compose.log" 2>&1
-
-echo "📋 Статус docker compose:"
 docker compose -f $COMPOSE_FILES ps
 
 echo "⏳ Ожидание запуска сервисов..."
