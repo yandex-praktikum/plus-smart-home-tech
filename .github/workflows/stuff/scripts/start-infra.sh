@@ -47,8 +47,7 @@ if [[ "$COMPOSE_FILES" == *"postgres.yml"* ]]; then
     MAX_RETRIES=10
     RETRY_DELAY=5
     attempt=0
-    success=0 & docker exec postgres pg_isready -q -d telemetry_analyzer -U dbuser &>/dev/null | success=1
-    while [[ $success == 1 ]]; do
+    until docker exec postgres pg_isready -U postgres &>/dev/null; do
         ((attempt++))
         echo "❌ PostgreSQL ещё не готов, попытка $attempt/$MAX_RETRIES..."
         if [[ $attempt -ge $MAX_RETRIES ]]; then
@@ -56,7 +55,6 @@ if [[ "$COMPOSE_FILES" == *"postgres.yml"* ]]; then
             exit 1
         fi
         sleep $RETRY_DELAY
-        success=0 & docker exec postgres pg_isready -q -d telemetry_analyzer -U dbuser &>/dev/null | success=1
     done
     echo "✅ PostgreSQL готов!"
 fi
