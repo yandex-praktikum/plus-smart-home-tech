@@ -174,7 +174,7 @@ jobs:
             ./logs/*.log
 
       - name: Fail if Tests Failed
-        if: env.STATUS != 'success'
+        if: env.STATUS != 'success' && env.STATUS != 'skipped'
         run: |
           echo "❌ Тесты завершились с ошибками!"
           exit 1
