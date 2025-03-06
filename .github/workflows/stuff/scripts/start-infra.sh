@@ -64,6 +64,19 @@ if [[ "$COMPOSE_FILES" == *"postgres.yml"* ]]; then
         sleep $RETRY_DELAY
     done
     echo "✅ PostgreSQL готов!"
+
+    # Проверяем, завершился ли db-init
+    if docker ps -a --format '{{.Names}}' | grep -q '^db-init$'; then
+        EXIT_CODE=$(docker inspect db-init --format='{{.State.ExitCode}}')
+
+        if [ "$EXIT_CODE" -ne 0 ]; then
+            echo "❌ Ошибка: db-init завершился с кодом $EXIT_CODE!"
+            docker logs db-init
+            exit 1
+        else
+            echo "✅ db-init успешно завершился!"
+        fi
+    fi
 fi
 
 echo "📋 Статус запущенных сервисов:"

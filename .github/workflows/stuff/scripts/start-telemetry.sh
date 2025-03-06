@@ -94,7 +94,10 @@ case "$BRANCH_NAME" in
   "4-analyzer")
     start_service "collector" "$COLLECTOR_JAR" "--grpc.server.port=59091"
     start_service "aggregator" "$AGGREGATOR_JAR" ""
-    start_service "analyzer" "$ANALYZER_JAR" ""
+    start_service "analyzer" "$ANALYZER_JAR" \
+      "--spring.datasource.url=jdbc:postgresql://localhost:${POSTGRES_PORT}/telemetry_analyzer \
+       --spring.datasource.username=${POSTGRES_USER} \
+       --spring.datasource.password=${POSTGRES_PASSWORD}"
     check_collector "59091"
     ;;
   "develop")
