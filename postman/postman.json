@@ -1,10 +1,9 @@
 {
 	"info": {
-		"_postman_id": "74714ff0-8cd7-47ea-a36c-a20e21343e99",
+		"_postman_id": "7759eafd-8ac5-42b2-8d5e-7efa97267d41",
 		"name": "(Sprint 21) Smart Home Technologies API",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "23073145",
-		"_collection_link": "https://universal-shadow-295426.postman.co/workspace/My-Workspace~4200f6aa-0504-44b1-8a1d-707d0dcbd5ce/collection/13708500-74714ff0-8cd7-47ea-a36c-a20e21343e99?action=share&source=collection_link&creator=23073145"
+		"_exporter_id": "15544904"
 	},
 	"item": [
 		{
@@ -207,6 +206,62 @@
 								"v1",
 								"shopping-store",
 								"{{product_id}}"
+							]
+						},
+						"description": "Получить сведения по товару из БД."
+					},
+					"response": []
+				},
+				{
+					"name": "get Product by Category LIGHTING",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Код ответа 200\", function () {\r",
+									"    pm.expect(pm.response.code).to.be.equal(200);\r",
+									"});\r",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}{{shopping-store-port}}/api/v1/shopping-store?category=LIGHTING",
+							"host": [
+								"{{baseUrl}}{{shopping-store-port}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"shopping-store"
+							],
+							"query": [
+								{
+									"key": "category",
+									"value": "LIGHTING"
+								}
 							]
 						},
 						"description": "Получить сведения по товару из БД."
@@ -459,7 +514,6 @@
 									"\r",
 									"    try {\r",
 									"        product = rnd.getProduct();\r",
-									"        product.\r",
 									"        product.quantityState = \"ENDED\";\r",
 									"        product = await api.addProduct(product);\r",
 									"\r",
@@ -694,11 +748,27 @@
 									"    await api.addProductToWarehouse(product1);        \r",
 									"    await api.addProductToWarehouse(product2);\r",
 									"    \r",
+									"    amount1 = Math.floor(Math.random() * 1000);\r",
+									"    amount2 = Math.floor(Math.random() * 1000);\r",
+									"\r",
 									"    productList = {\r",
-									"        [product1.productId]: Math.floor(Math.random() * 1000), // Случайное число до 1000\r",
-									"        [product2.productId]: Math.floor(Math.random() * 1000)  // Случайное число до 1000\r",
+									"        [product1.productId]: amount1, // Случайное число до 1000\r",
+									"        [product2.productId]: amount2  // Случайное число до 1000\r",
 									"    };\r",
 									"    \r",
+									"    pr1 = {\r",
+									"            \"productId\": product1.productId,\r",
+									"            \"quantity\": amount1\r",
+									"        }\r",
+									"    pr2 = {\r",
+									"            \"productId\": product2.productId,\r",
+									"            \"quantity\": amount2\r",
+									"        }\r",
+									"\r",
+									"    await api.addQuantityOfProductsToWarehouse(pr1);\r",
+									"    await api.addQuantityOfProductsToWarehouse(pr2);\r",
+									"\r",
+									"    console.log(\"Список продуктов\", productList);\r",
 									"    pm.collectionVariables.set(\"productList\", productList); // Сохраняем productList, если нужно\r",
 									"} catch (err) {\r",
 									"    console.error(\"Ошибка при подготовке тестовых данных.\", err);\r",
@@ -799,8 +869,7 @@
 							"query": [
 								{
 									"key": "username",
-									"value": "{{userName}}",
-									"description": "(Required) "
+									"value": "{{userName}}"
 								}
 							]
 						},
