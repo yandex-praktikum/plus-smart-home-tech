@@ -18,7 +18,7 @@ else
     echo "📂 Сохраняем логи docker compose..."
     docker compose $COMPOSE_FILES logs > "$LOG_DIR/docker-compose.log" 2>&1
     echo "🛑 Остановка всех сервисов..."
-    docker compose $COMPOSE_FILES down
+    docker compose $COMPOSE_FILES down --volumes
 fi
 
 echo "✅ Инфраструктура остановлена."

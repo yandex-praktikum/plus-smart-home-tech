@@ -110,10 +110,6 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Check and Build application
-        run: |
-          mvn clean install -DskipTests --no-transfer-progress
-
       - name: Checkout workflow stuff
         run: |
           # Создаем временную папку
@@ -125,9 +121,9 @@ jobs:
           git remote add origin "$STUFF_REPO"
           git config core.sparseCheckout true
           echo "$STUFF_PATH/*" >> .git/info/sparse-checkout
-
-          # Клонируем только нужную папку
-          git pull --depth=1 origin "$STUFF_BRANCH"
+          
+          # Клонируем только нужную папку с аутентификацией
+          git pull --depth=1 "https://x-access-token:${GH_TOKEN}@${STUFF_REPO#https://}" "$STUFF_BRANCH"
           
           mkdir -p "../${STUFF_PATH}"
 
@@ -141,6 +137,12 @@ jobs:
           rm -rf temp_checkout
           # Даём разрешения на выполнение скриптов
           chmod +x ${STUFF_PATH}/scripts/*.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Check and Build application
+        run: |
+          mvn clean install -DskipTests --no-transfer-progress
 
       - name: Start infrastructure
         run: ${STUFF_PATH}/scripts/start-infra.sh
@@ -158,6 +160,34 @@ jobs:
           contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer", "develop"]'), github.head_ref)
         run: ${STUFF_PATH}/scripts/run-tests.sh
         continue-on-error: false
+
+      - name: Verify JAR files and Start Services
+        if: |
+          contains(fromJson('["7-spring-cloud-microservices"]'), github.ref_name) || 
+          contains(fromJson('["7-spring-cloud-microservices"]'), github.head_ref)
+        run: ${STUFF_PATH}/scripts/start-services.sh
+
+      - name: Install Node
+        if: |
+          contains(fromJson('["7-spring-cloud-microservices"]'), github.ref_name) || 
+          contains(fromJson('["7-spring-cloud-microservices"]'), github.head_ref)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '16.x'
+
+      - name: Install newman
+        if: |
+          contains(fromJson('["7-spring-cloud-microservices"]'), github.ref_name) || 
+          contains(fromJson('["7-spring-cloud-microservices"]'), github.head_ref)
+        run: |
+          npm install -g newman
+          npm install -g newman-reporter-htmlextra
+
+      - name: Run POSTMAN tests
+        if: |
+          contains(fromJson('["7-spring-cloud-microservices"]'), github.ref_name) || 
+          contains(fromJson('["7-spring-cloud-microservices"]'), github.head_ref)
+        run: ${STUFF_PATH}/scripts/run-postman-tests.sh
 
       - name: Capture Exit Status
         if: always()
