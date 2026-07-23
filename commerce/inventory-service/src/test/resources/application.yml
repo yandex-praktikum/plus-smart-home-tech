@@ -1,0 +1,19 @@
+# Тестовая конфигурация: H2 вместо PostgreSQL.
+spring:
+  cloud:
+    config:
+      enabled: false
+  datasource:
+    url: jdbc:h2:mem:inventory_test;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+  sql:
+    init:
+      mode: never
+
+eureka:
+  client:
+    enabled: false
