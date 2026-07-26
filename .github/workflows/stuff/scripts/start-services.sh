@@ -161,6 +161,17 @@ case "$BRANCH_NAME" in
 
     sleep 10
     ;;
+  "7-microservices")
+    start_platform_core
+
+    sleep 10
+
+    start_stateful_service "inventory-service" "inventory_db" "--spring.application.name=inventory-service"
+    start_stateful_service "order-service" "order_db" "--spring.application.name=order-service"
+    start_stateful_service "product-service" "product_db" "--spring.application.name=product-service"
+
+    sleep 10
+    ;;
   *)
     echo "❌ Ошибка: Ветка $BRANCH_NAME не поддерживается этим workflow."
     exit 1

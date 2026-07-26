@@ -4,3 +4,6 @@ CREATE DATABASE commerce_warehouse;
 CREATE DATABASE commerce_order;
 CREATE DATABASE commerce_delivery;
 CREATE DATABASE commerce_payment;
+CREATE DATABASE product_db;
+CREATE DATABASE inventory_db;
+CREATE DATABASE order_db;

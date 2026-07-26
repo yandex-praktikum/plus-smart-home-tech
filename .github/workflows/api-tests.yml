@@ -164,7 +164,9 @@ jobs:
       - name: Verify JAR files and Start Services
         if: |
           contains(fromJson('["7-spring-cloud-microservices"]'), github.ref_name) || 
-          contains(fromJson('["7-spring-cloud-microservices"]'), github.head_ref)
+          contains(fromJson('["7-spring-cloud-microservices"]'), github.head_ref) ||
+          contains(fromJson('["7-microservices"]'), github.ref_name) || 
+          contains(fromJson('["7-microservices"]'), github.head_ref)
         run: ${STUFF_PATH}/scripts/start-services.sh
 
       - name: Install Node
