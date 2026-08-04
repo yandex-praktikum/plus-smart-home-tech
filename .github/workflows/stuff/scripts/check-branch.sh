@@ -83,6 +83,12 @@ case "$BRANCH_NAME" in
     check_target_branch "main"
     ;;
 
+  "8-open-feign")
+    echo "✅ Open feign - OK"
+    check_prerequisite_branch "8-open-feign" "7-microservices" 10
+    check_target_branch "development"
+    ;;
+
   "8-gateway")
     echo "✅ API Gateway - OK"
     check_prerequisite_branch "8-gateway" "7-spring-cloud-microservices" 10
