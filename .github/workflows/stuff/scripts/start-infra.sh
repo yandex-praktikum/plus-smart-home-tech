@@ -33,7 +33,7 @@ if [[ "$BRANCH_NAME" =~ ^(1-collector-json|2-collector-grpc|3-aggregator|4-analy
   COMPOSE_FILES="$COMPOSE_FILES -f $COMPOSE_PATH/kafka.yml"
 fi
 
-if [[ "$BRANCH_NAME" =~ ^(4-analyzer|5-config-server|6-discovery-server|7-microservices|7-spring-cloud-microservices|8-gateway|9-gateway-microservices|develop)$ ]]; then
+if [[ "$BRANCH_NAME" =~ ^(4-analyzer|5-config-server|6-discovery-server|7-microservices|7-spring-cloud-microservices|8-gateway|9-gateway-microservices|develop|8-open-feign|9-circuit-breaker|10-gateway-load-balancing|11-security)$ ]]; then
   echo "Добавляем к запуску Postgres"
   COMPOSE_FILES="$COMPOSE_FILES -f $COMPOSE_PATH/postgres.yml"
 fi

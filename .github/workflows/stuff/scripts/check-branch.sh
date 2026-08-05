@@ -61,14 +61,14 @@ case "$BRANCH_NAME" in
 
   "5-config-server")
     echo "Config server - OK"
-    check_prerequisite_branch "5-config-server" "develop" 7
-    check_target_branch "main"
+    check_prerequisite_branch "5-config-server" "4-analyzer" 7
+    check_target_branch "develop"
     ;;
 
   "6-discovery-server")
     echo "✅ Discovery server - OK"
     check_prerequisite_branch "6-discovery-server" "5-config-server" 8
-    check_target_branch "main"
+    check_target_branch "develop"
     ;;
 
   "7-spring-cloud-microservices")
@@ -83,16 +83,10 @@ case "$BRANCH_NAME" in
     check_target_branch "main"
     ;;
 
-  "8-open-feign")
-    echo "✅ Open feign - OK"
-    check_prerequisite_branch "8-open-feign" "7-microservices" 10
-    check_target_branch "development"
-    ;;
-
   "8-gateway")
     echo "✅ API Gateway - OK"
     check_prerequisite_branch "8-gateway" "7-spring-cloud-microservices" 10
-    check_target_branch "main"
+    check_target_branch "develop"
     ;;
 
   "9-gateway-microservices")
@@ -101,9 +95,21 @@ case "$BRANCH_NAME" in
     check_target_branch "main"
     ;;
 
+  "8-open-feign")
+    echo "✅ Open feign - OK"
+    check_prerequisite_branch "8-open-feign" "7-microservices" 10
+    check_target_branch "development"
+    ;;
+
+  "11-security")
+    echo "✅ API Gateway security - OK"
+    check_prerequisite_branch "11-security" "10-gateway-load-balancing" 12
+    check_target_branch "main"
+    ;;
+
   *)
     echo "❌ Unknown branch: $BRANCH_NAME"
-    exit 12
+    exit 13
     ;;
 esac
 
