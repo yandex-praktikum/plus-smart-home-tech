@@ -101,15 +101,21 @@ case "$BRANCH_NAME" in
     check_target_branch "development"
     ;;
 
+  "9-circuit-breaker")
+    echo "✅ Circuit breaker - OK"
+    check_prerequisite_branch "9-circuit-breaker" "8-open-feign" 11
+    check_target_branch "development"
+    ;;
+
   "11-security")
     echo "✅ API Gateway security - OK"
-    check_prerequisite_branch "11-security" "10-gateway-load-balancing" 12
+    check_prerequisite_branch "11-security" "10-gateway-load-balancing" 13
     check_target_branch "main"
     ;;
 
   *)
     echo "❌ Unknown branch: $BRANCH_NAME"
-    exit 13
+    exit 14
     ;;
 esac
 
