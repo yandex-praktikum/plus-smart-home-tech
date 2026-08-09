@@ -120,9 +120,24 @@ case "$BRANCH_NAME" in
     check_target_branch "development"
     ;;
 
+  "10-gateway-load-balancing")
+    echo "✅ API Gateway load balancing - OK"
+    check_prerequisite_branch "10-gateway-load-balancing" "9-circuit-breaker" 12
+    check_target_branch "development"
+    ;;
+
   "11-security")
     echo "✅ API Gateway security - OK"
     check_prerequisite_branch "11-security" "10-gateway-load-balancing" 13
+    check_target_branch "development"
+    ;;
+
+  "development")
+    echo "✅ Development branch - OK"
+    # development — интеграционная ветка трека микросервисов магазина:
+    # в неё вливаются этапы 8-open-feign … 11-security, поэтому достаточно убедиться,
+    # что влит последний из них (остальные проверяются по цепочке 8 → 9 → 10 → 11)
+    check_prerequisite_branch "development" "11-security" 6
     check_target_branch "main"
     ;;
 

@@ -28,7 +28,7 @@ POSTGRES_DB=${POSTGRES_DB:-telemetry_analyzer}
 # Определяем, какие docker-compose файлы использовать
 COMPOSE_FILES="$COMPOSE_PATH/docker-compose.yml" # в docker-compose.yml можно поместить настройки актуальные для всех веток
 
-if [[ "$BRANCH_NAME" =~ ^(1-collector-json|2-collector-grpc|3-aggregator|4-analyzer|develop)$ ]]; then
+if [[ "$BRANCH_NAME" =~ ^(1-collector-json|2-collector-grpc|3-aggregator|4-analyzer|5-config-server|6-discovery-server|develop)$ ]]; then
   echo "Добавляем к запуску Kafka"
   COMPOSE_FILES="$COMPOSE_FILES -f $COMPOSE_PATH/kafka.yml"
 fi

@@ -155,8 +155,19 @@ jobs:
           echo "BRANCH_NAME=${STAGE}" >> $GITHUB_ENV
           echo "stage=${STAGE}" >> $GITHUB_OUTPUT
 
+          # Этапы, на которых в проекте уже должен быть Spring Cloud Config Server
+          case "$STAGE" in
+            5-config-server|6-discovery-server|7-*|8-*|9-*|10-*|11-*) CONFIG_STAGE=true ;;
+            *) CONFIG_STAGE=false ;;
+          esac
+          echo "CONFIG_STAGE=${CONFIG_STAGE}" >> $GITHUB_ENV
+
       - name: Start infrastructure
         run: ${STUFF_PATH}/scripts/start-infra.sh
+
+      - name: Check Config Server module and services configuration
+        if: env.CONFIG_STAGE == 'true'
+        run: ${STUFF_PATH}/scripts/check-config-server.sh static
 
       - name: Verify JAR files and Start Telemetry Services
         if: contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer", "develop"]'), env.BRANCH_NAME)
@@ -169,8 +180,16 @@ jobs:
         continue-on-error: false
 
       - name: Verify JAR files and Start Services
-        if: contains(fromJson('["7-spring-cloud-microservices", "7-microservices"]'), env.BRANCH_NAME)
+        if: env.CONFIG_STAGE == 'true'
         run: ${STUFF_PATH}/scripts/start-services.sh
+
+      - name: Check Config Server serves configuration for every service
+        if: env.CONFIG_STAGE == 'true'
+        run: ${STUFF_PATH}/scripts/check-config-server.sh runtime
+
+      - name: Check services use configuration from Config Server
+        if: env.CONFIG_STAGE == 'true'
+        run: ${STUFF_PATH}/scripts/check-config-clients.sh
 
       - name: Install Node
         if: contains(fromJson('["7-spring-cloud-microservices", "7-microservices"]'), env.BRANCH_NAME)

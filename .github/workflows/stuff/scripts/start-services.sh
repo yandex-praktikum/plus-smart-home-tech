@@ -1,5 +1,16 @@
 #!/bin/bash
 
+# Запуск сервисов для веток, где уже есть платформенная инфраструктура
+# (config-server, discovery-server, gateway) и микросервисы.
+#
+# Скрипт дополнительно фиксирует список запущенных сервисов в $STARTED_SERVICES_FILE,
+# чтобы check-config-clients.sh мог проверить, что каждый сервис получил
+# конфигурацию из config-server.
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=./config-lib.sh
+source "${SCRIPT_DIR}/config-lib.sh"
+
 # Проверка переменных окружения и установка значений по умолчанию
 if [ -z "$BRANCH_NAME" ]; then
   BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF##*/}}
@@ -17,7 +28,7 @@ if ! command -v jq &> /dev/null; then
   exit 1
 fi
 
-WAIT_FOR_IT="$(dirname "$0")/wait-for-it.sh"
+WAIT_FOR_IT="${SCRIPT_DIR}/wait-for-it.sh"
 
 # Создаем директорию логов, если ее нет
 LOG_DIR="${LOG_DIR:-./logs}"
@@ -32,6 +43,18 @@ POSTGRES_PORT=${POSTGRES_PORT:-5432}
 EUREKA_PORT=${EUREKA_PORT:-8761}
 EUREKA_URL="http://localhost:${EUREKA_PORT}/eureka"
 
+# Включается, когда в ветке запускается discovery-server
+EUREKA_ENABLED=false
+
+# Аргументы, которые добавляются каждому клиенту config-server.
+# Аргументы командной строки имеют наивысший приоритет и не могут быть переопределены
+# конфигурацией, полученной с config-server, — это гарантирует, что в логе сервиса
+# останутся сообщения Spring Cloud Config Client о загрузке конфигурации.
+CONFIG_CLIENT_ARGS="--logging.level.org.springframework.cloud.config=DEBUG"
+
+# Список запущенных сервисов создаём заново при каждом запуске
+: > "$STARTED_SERVICES_FILE"
+
 # Функция поиска правильного JAR'ника
 find_jar() {
   local service=$1
@@ -45,6 +68,44 @@ find_jar() {
   fi
 
   echo "$jar_path"
+}
+
+# Имя приложения (spring.application.name) может не совпадать с именем модуля:
+# например, модуль gateway-server регистрируется в Eureka как gateway.
+resolve_app_name() {
+  local module=$1
+  local extra_args=$2
+  local name dir
+
+  name=$(echo "$extra_args" | grep -oE -- '--spring\.application\.name=[^ ]+' | head -n 1 | cut -d= -f2-)
+
+  if [ -z "$name" ]; then
+    dir=$(cfg_module_dir_by_name "$module" 2>/dev/null)
+    [ -n "$dir" ] && name=$(cfg_module_app_name "$dir")
+  fi
+
+  [ -z "$name" ] && name="$module"
+  echo "$name"
+}
+
+check_eureka_registration() {
+  local service_name=$1
+  echo "⏳ Проверка регистрации $service_name в Eureka..."
+
+  for i in {1..12}; do
+    if curl -s -H "Accept: application/json" "${EUREKA_URL}/apps/$service_name" \
+         | jq -e '.application.instance | if type=="array" then length > 0 else . != null end' > /dev/null 2>&1; then
+      echo "✅ Сервис $service_name зарегистрирован в Eureka."
+      return 0
+    fi
+    echo "⏳ Ждём регистрации $service_name в Eureka... ($i/12)"
+    sleep 5
+  done
+
+  echo "❌ Сервис $service_name не зарегистрировался в Eureka."
+  echo "📋 Список приложений, зарегистрированных в Eureka:"
+  curl -s -H "Accept: application/json" "${EUREKA_URL}/apps" | jq .
+  return 1
 }
 
 check_http_service() {
@@ -91,6 +152,19 @@ check_http_service() {
   exit 1
 }
 
+# Отдельно ловим типовые ошибки старта Spring Boot, в том числе неудачную попытку
+# получить конфигурацию с config-server.
+check_startup_errors() {
+  local service_name=$1
+  local log_file=$2
+
+  if grep -Eq "APPLICATION FAILED TO START|Application run failed|ConfigClientFailFastException" "$log_file" 2>/dev/null; then
+    echo "❌ Ошибка: Сервис $service_name не смог стартовать. Фрагмент лога:"
+    grep -E -A 10 "APPLICATION FAILED TO START|Application run failed|ConfigClientFailFastException" "$log_file" | head -n 40
+    exit 1
+  fi
+}
+
 start_service() {
   local service_name=$1
   local extra_args=$2
@@ -104,22 +178,46 @@ start_service() {
     exit 1
   fi
 
-  echo "⏳ Запуск сервиса $service_name..."
+  local app_name
+  app_name=$(resolve_app_name "$service_name" "$extra_args")
+
+  local eureka_args=""
+  if [ "$EUREKA_ENABLED" = "true" ]; then
+    eureka_args="--eureka.client.serviceUrl.defaultZone=${EUREKA_URL}/"
+  fi
+
+  echo "⏳ Запуск сервиса $service_name (имя приложения: $app_name)..."
   nohup java -jar "$jar_path" $extra_args \
-        --eureka.client.serviceUrl.defaultZone=${EUREKA_URL}/ \
+        $eureka_args \
         --logging.file.name="$log_file" \
         > "$log_file" 2>&1 &
 
+  # В список для проверки клиентов config-server попадают только прикладные сервисы:
+  # сам config-server и discovery-server клиентами быть не обязаны.
+  case " $CONFIG_CLIENT_EXCLUDES " in
+    *" $service_name "*) ;;
+    *) printf '%s\t%s\t%s\n' "$app_name" "$log_file" "$service_name" >> "$STARTED_SERVICES_FILE" ;;
+  esac
+
   sleep 15
+  check_startup_errors "$service_name" "$log_file"
+
   if ! pgrep -f "$jar_path" > /dev/null; then
     echo "❌ Ошибка: Сервис $service_name не запустился. Проверьте логи: $log_file"
     cat "$log_file"
     exit 1
   fi
 
-  if [[ "$registration_check" == "http" ]]; then
-    check_http_service "$service_name"
-  fi
+  case "$registration_check" in
+    http)
+      check_http_service "$app_name"
+      ;;
+    eureka)
+      check_eureka_registration "$app_name" || exit 1
+      ;;
+    none)
+      ;;
+  esac
 
   echo "✅ Сервис $service_name успешно запущен и готов к работе."
 }
@@ -137,27 +235,120 @@ start_stateful_service() {
   start_service $service_name "$extra_args" "$registration_check"
 }
 
-start_platform_core() {
+# Запускает сервис, только если его модуль (и собранный JAR) присутствуют в ветке
+start_optional_stateful_service() {
+  local service_name=$1
+  local db_name=$2
+  local extra_args=$3
+  local registration_check=${4:-http}
+
+  if [ -z "$(find_jar "$service_name")" ]; then
+    echo "ℹ️  Модуль $service_name в этой ветке отсутствует — пропускаем."
+    return 0
+  fi
+
+  start_stateful_service "$service_name" "$db_name" "$extra_args" "$registration_check"
+}
+
+start_discovery_server() {
+  EUREKA_ENABLED=true
   start_service "discovery-server" "--server.port=${EUREKA_PORT}" "none"
-  $WAIT_FOR_IT localhost:${EUREKA_PORT} --timeout=25 --strict -- echo "✅ Eureka is up"
+  $WAIT_FOR_IT localhost:${EUREKA_PORT} --timeout=60 --strict -- echo "✅ Eureka is up"
+}
 
-  start_service "config-server"
+start_config_server() {
+  local registration_check=${1:-none}
 
-  sleep 15
+  start_service "config-server" "" "$registration_check"
+
+  local base_url
+  base_url=$(cfg_config_server_url)
+  echo "⏳ Ожидание готовности config-server по адресу $base_url..."
+
+  if ! cfg_wait_for_config_server "$base_url"; then
+    echo "❌ Ошибка: config-server не отвечает по адресу $base_url. Лог сервиса:"
+    tail -n 60 "${LOG_DIR}/config-server.log"
+    exit 1
+  fi
+
+  echo "✅ config-server готов: $base_url"
+}
+
+start_platform_core() {
+  start_discovery_server
+  start_config_server "eureka"
+  sleep 5
+}
+
+# Телеметрия — сервисы, которые есть уже на ветках 5-config-server и 6-discovery-server
+start_telemetry_services() {
+  local registration_check=${1:-none}
+
+  start_service "collector" "$CONFIG_CLIENT_ARGS" "$registration_check"
+  start_service "aggregator" "$CONFIG_CLIENT_ARGS" "$registration_check"
+  start_stateful_service "analyzer" "telemetry_analyzer" "$CONFIG_CLIENT_ARGS" "$registration_check"
+}
+
+# Микросервисы витрины (трек 7-spring-cloud-microservices / 8-gateway / 9-gateway-microservices)
+start_commerce_showcase_services() {
+  start_stateful_service "warehouse" "commerce_warehouse" "--spring.application.name=warehouse $CONFIG_CLIENT_ARGS"
+  start_stateful_service "shopping-cart" "commerce_shopping_cart" "--spring.application.name=shopping-cart $CONFIG_CLIENT_ARGS"
+  start_stateful_service "shopping-store" "commerce_shopping_store" "--spring.application.name=shopping-store $CONFIG_CLIENT_ARGS"
+
+  start_optional_stateful_service "order" "commerce_order" "--spring.application.name=order $CONFIG_CLIENT_ARGS"
+  start_optional_stateful_service "payment" "commerce_payment" "--spring.application.name=payment $CONFIG_CLIENT_ARGS"
+  start_optional_stateful_service "delivery" "commerce_delivery" "--spring.application.name=delivery $CONFIG_CLIENT_ARGS"
+}
+
+# Микросервисы магазина (трек 7-microservices / 8-open-feign / 9-circuit-breaker / 10 / 11)
+start_commerce_shop_services() {
+  start_stateful_service "inventory-service" "inventory_db" "--spring.application.name=inventory-service $CONFIG_CLIENT_ARGS"
+  start_stateful_service "order-service" "order_db" "--spring.application.name=order-service $CONFIG_CLIENT_ARGS"
+  start_stateful_service "product-service" "product_db" "--spring.application.name=product-service $CONFIG_CLIENT_ARGS"
+}
+
+# Gateway в разных решениях называется по-разному
+start_gateway() {
+  local module
+
+  for module in gateway-server api-gateway gateway; do
+    if [ -n "$(find_jar "$module")" ]; then
+      start_service "$module" "$CONFIG_CLIENT_ARGS" "http"
+      return 0
+    fi
+  done
+
+  echo "❌ Ошибка: не найден JAR gateway-сервиса (gateway-server / api-gateway / gateway)."
+  exit 1
 }
 
 echo "Проверка наличия JAR-файлов и запуск нужных сервисов..."
 
 # Логика запуска в зависимости от ветки
 case "$BRANCH_NAME" in
+  "5-config-server")
+    start_config_server "none"
+    start_telemetry_services "none"
+
+    sleep 10
+    ;;
+  "6-discovery-server")
+    start_platform_core
+
+    sleep 10
+
+    start_telemetry_services "eureka"
+
+    sleep 10
+    ;;
   "7-spring-cloud-microservices")
     start_platform_core
 
     sleep 10
 
-    start_stateful_service "warehouse" "commerce_warehouse" "--spring.application.name=warehouse"
-    start_stateful_service "shopping-cart" "commerce_shopping_cart" "--spring.application.name=shopping-cart"
-    start_stateful_service "shopping-store" "commerce_shopping_store" "--spring.application.name=shopping-store"
+    start_stateful_service "warehouse" "commerce_warehouse" "--spring.application.name=warehouse $CONFIG_CLIENT_ARGS"
+    start_stateful_service "shopping-cart" "commerce_shopping_cart" "--spring.application.name=shopping-cart $CONFIG_CLIENT_ARGS"
+    start_stateful_service "shopping-store" "commerce_shopping_store" "--spring.application.name=shopping-store $CONFIG_CLIENT_ARGS"
 
     sleep 10
     ;;
@@ -166,9 +357,36 @@ case "$BRANCH_NAME" in
 
     sleep 10
 
-    start_stateful_service "inventory-service" "inventory_db" "--spring.application.name=inventory-service"
-    start_stateful_service "order-service" "order_db" "--spring.application.name=order-service"
-    start_stateful_service "product-service" "product_db" "--spring.application.name=product-service"
+    start_commerce_shop_services
+
+    sleep 10
+    ;;
+  "8-gateway" | "9-gateway-microservices")
+    start_platform_core
+
+    sleep 10
+
+    start_commerce_showcase_services
+    start_gateway
+
+    sleep 10
+    ;;
+  "8-open-feign" | "9-circuit-breaker")
+    start_platform_core
+
+    sleep 10
+
+    start_commerce_shop_services
+
+    sleep 10
+    ;;
+  "10-gateway-load-balancing" | "11-security")
+    start_platform_core
+
+    sleep 10
+
+    start_commerce_shop_services
+    start_gateway
 
     sleep 10
     ;;
@@ -177,3 +395,6 @@ case "$BRANCH_NAME" in
     exit 1
     ;;
 esac
+
+echo "📋 Запущенные сервисы:"
+cat "$STARTED_SERVICES_FILE"
