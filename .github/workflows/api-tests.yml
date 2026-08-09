@@ -192,19 +192,19 @@ jobs:
         run: ${STUFF_PATH}/scripts/check-config-clients.sh
 
       - name: Install Node
-        if: contains(fromJson('["7-spring-cloud-microservices", "7-microservices"]'), env.BRANCH_NAME)
+        if: contains(fromJson('["7-spring-cloud-microservices", "7-microservices", "8-open-feign"]'), env.BRANCH_NAME)
         uses: actions/setup-node@v4
         with:
           node-version: '16.x'
 
       - name: Install newman
-        if: contains(fromJson('["7-spring-cloud-microservices", "7-microservices"]'), env.BRANCH_NAME)
+        if: contains(fromJson('["7-spring-cloud-microservices", "7-microservices", "8-open-feign"]'), env.BRANCH_NAME)
         run: |
           npm install -g newman
           npm install -g newman-reporter-htmlextra
 
       - name: Run POSTMAN tests
-        if: contains(fromJson('["7-spring-cloud-microservices", "7-microservices"]'), env.BRANCH_NAME)
+        if: contains(fromJson('["7-spring-cloud-microservices", "7-microservices", "8-open-feign"]'), env.BRANCH_NAME)
         run: ${STUFF_PATH}/scripts/run-postman-tests.sh
 
       - name: Capture Exit Status
