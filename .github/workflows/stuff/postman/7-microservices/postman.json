@@ -1,0 +1,3322 @@
+{
+	"info": {
+		"_postman_id": "a55c55e3-2d83-4ab6-a9d8-e21116f2c869",
+		"name": "(Sprint 21) Smart Home Shop API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "product-service",
+			"item": [
+				{
+					"name": "create Category",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {",
+									"    const rnd = new RandomUtils();",
+									"",
+									"    const category = rnd.getCategory();",
+									"    pm.collectionVariables.set('category', JSON.stringify(category));",
+									"",
+									"    setBody(pm, category);",
+									"};",
+									"",
+									"const interval = setInterval(() => {}, 1000);",
+									"",
+									"setTimeout(async () => {",
+									"    try {",
+									"        await main();",
+									"    } catch (e) {",
+									"        console.error(e);",
+									"    } finally {",
+									"        clearInterval(interval);",
+									"    }",
+									"}, 100);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 200 или 201', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+									"});",
+									"",
+									"pm.test('Категория создана и содержит корректные поля', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const category = JSON.parse(pm.collectionVariables.get('category'));",
+									"",
+									"    pm.expect(responseJson.id, 'Поле id').to.be.a('number');",
+									"    pm.expect(responseJson.name, 'Поле name').to.equal(category.name);",
+									"    pm.expect(responseJson.description, 'Поле description').to.equal(category.description);",
+									"});",
+									"",
+									"['category'].forEach(key => pm.collectionVariables.unset(key));"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}{{product-service-port}}/api/categories",
+							"host": [
+								"{{baseUrl}}{{product-service-port}}"
+							],
+							"path": [
+								"api",
+								"categories"
+							]
+						},
+						"description": "Создать новую категорию товаров."
+					},
+					"response": []
+				},
+				{
+					"name": "get Category By Id",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {",
+									"    const api = new API(pm);",
+									"    const rnd = new RandomUtils();",
+									"",
+									"    const category = await api.createCategory(rnd.getCategory());",
+									"",
+									"    pm.collectionVariables.set('category_id', category.id);",
+									"    pm.collectionVariables.set('category', JSON.stringify(category));",
+									"};",
+									"",
+									"const interval = setInterval(() => {}, 1000);",
+									"",
+									"setTimeout(async () => {",
+									"    try {",
+									"        await main();",
+									"    } catch (e) {",
+									"        console.error(e);",
+									"    } finally {",
+									"        clearInterval(interval);",
+									"    }",
+									"}, 100);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 200', function () {",
+									"    pm.expect(pm.response.code).to.equal(200);",
+									"});",
+									"",
+									"pm.test('Возвращается запрошенная категория', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const category = JSON.parse(pm.collectionVariables.get('category'));",
+									"",
+									"    pm.expect(responseJson.id, 'Поле id').to.equal(category.id);",
+									"    pm.expect(responseJson.name, 'Поле name').to.equal(category.name);",
+									"    pm.expect(responseJson.description, 'Поле description').to.equal(category.description);",
+									"});",
+									"",
+									"['category', 'category_id'].forEach(key => pm.collectionVariables.unset(key));"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}{{product-service-port}}/api/categories/{{category_id}}",
+							"host": [
+								"{{baseUrl}}{{product-service-port}}"
+							],
+							"path": [
+								"api",
+								"categories",
+								"{{category_id}}"
+							]
+						},
+						"description": "Получить категорию по идентификатору."
+					},
+					"response": []
+				},
+				{
+					"name": "get Categories",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {",
+									"    const api = new API(pm);",
+									"    const rnd = new RandomUtils();",
+									"",
+									"    const category = await api.createCategory(rnd.getCategory());",
+									"",
+									"    pm.collectionVariables.set('category', JSON.stringify(category));",
+									"};",
+									"",
+									"const interval = setInterval(() => {}, 1000);",
+									"",
+									"setTimeout(async () => {",
+									"    try {",
+									"        await main();",
+									"    } catch (e) {",
+									"        console.error(e);",
+									"    } finally {",
+									"        clearInterval(interval);",
+									"    }",
+									"}, 100);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 200', function () {",
+									"    pm.expect(pm.response.code).to.equal(200);",
+									"});",
+									"",
+									"pm.test('Список категорий содержит созданную категорию', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const category = JSON.parse(pm.collectionVariables.get('category'));",
+									"",
+									"    pm.expect(responseJson, 'Тело ответа').to.be.an('array').that.is.not.empty;",
+									"",
+									"    const found = responseJson.find(item => item.id === category.id);",
+									"    pm.expect(found, 'Созданная категория отсутствует в списке').to.not.be.undefined;",
+									"    pm.expect(found.name, 'Поле name').to.equal(category.name);",
+									"    pm.expect(found.description, 'Поле description').to.equal(category.description);",
+									"});",
+									"",
+									"['category'].forEach(key => pm.collectionVariables.unset(key));"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}{{product-service-port}}/api/categories",
+							"host": [
+								"{{baseUrl}}{{product-service-port}}"
+							],
+							"path": [
+								"api",
+								"categories"
+							]
+						},
+						"description": "Получить список всех категорий."
+					},
+					"response": []
+				},
+				{
+					"name": "get Category By Unknown Id",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const rnd = new RandomUtils();",
+									"",
+									"pm.collectionVariables.set('unknown_id', rnd.getUnknownId());"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 404 для несуществующей категории', function () {",
+									"    pm.expect(pm.response.code).to.equal(404);",
+									"});",
+									"",
+									"['unknown_id'].forEach(key => pm.collectionVariables.unset(key));"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}{{product-service-port}}/api/categories/{{unknown_id}}",
+							"host": [
+								"{{baseUrl}}{{product-service-port}}"
+							],
+							"path": [
+								"api",
+								"categories",
+								"{{unknown_id}}"
+							]
+						},
+						"description": "Запрос несуществующей категории должен возвращать 404."
+					},
+					"response": []
+				},
+				{
+					"name": "create Product",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {",
+									"    const api = new API(pm);",
+									"    const rnd = new RandomUtils();",
+									"",
+									"    const category = await api.createCategory(rnd.getCategory());",
+									"    const product = rnd.getProduct(category.id);",
+									"",
+									"    pm.collectionVariables.set('category', JSON.stringify(category));",
+									"    pm.collectionVariables.set('product', JSON.stringify(product));",
+									"",
+									"    setBody(pm, product);",
+									"};",
+									"",
+									"const interval = setInterval(() => {}, 1000);",
+									"",
+									"setTimeout(async () => {",
+									"    try {",
+									"        await main();",
+									"    } catch (e) {",
+									"        console.error(e);",
+									"    } finally {",
+									"        clearInterval(interval);",
+									"    }",
+									"}, 100);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 200 или 201', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+									"});",
+									"",
+									"pm.test('Товар создан и содержит корректные поля', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const product = JSON.parse(pm.collectionVariables.get('product'));",
+									"    const category = JSON.parse(pm.collectionVariables.get('category'));",
+									"",
+									"    pm.expect(responseJson.id, 'Поле id').to.be.a('number');",
+									"    pm.expect(responseJson.name, 'Поле name').to.equal(product.name);",
+									"    pm.expect(responseJson.description, 'Поле description').to.equal(product.description);",
+									"    pm.expect(Number(responseJson.price), 'Поле price').to.be.closeTo(product.price, 0.011);",
+									"    pm.expect(responseJson.imageUrl, 'Поле imageUrl').to.equal(product.imageUrl);",
+									"    pm.expect(responseJson.active, 'Новый товар должен быть активным').to.equal(true);",
+									"    pm.expect(responseJson.category, 'Поле category').to.be.an('object');",
+									"    pm.expect(responseJson.category.id, 'Поле category.id').to.equal(category.id);",
+									"    pm.expect(responseJson.category.name, 'Поле category.name').to.equal(category.name);",
+									"});",
+									"",
+									"['product', 'category'].forEach(key => pm.collectionVariables.unset(key));"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}{{product-service-port}}/api/products",
+							"host": [
+								"{{baseUrl}}{{product-service-port}}"
+							],
+							"path": [
+								"api",
+								"products"
+							]
+						},
+						"description": "Добавить новый товар в каталог."
+					},
+					"response": []
+				},
+				{
+					"name": "create Product With Unknown Category",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const rnd = new RandomUtils();",
+									"",
+									"setBody(pm, rnd.getProduct(rnd.getUnknownId()));"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 404 для несуществующей категории', function () {",
+									"    pm.expect(pm.response.code).to.equal(404);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}{{product-service-port}}/api/products",
+							"host": [
+								"{{baseUrl}}{{product-service-port}}"
+							],
+							"path": [
+								"api",
+								"products"
+							]
+						},
+						"description": "Создание товара со ссылкой на несуществующую категорию должно возвращать 404."
+					},
+					"response": []
+				},
+				{
+					"name": "create Product With Invalid Data",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"setBody(pm, {",
+									"    name: '',",
+									"    description: 'Товар с некорректными данными',",
+									"    price: -100",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 400 при нарушении правил валидации', function () {",
+									"    pm.expect(pm.response.code).to.equal(400);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}{{product-service-port}}/api/products",
+							"host": [
+								"{{baseUrl}}{{product-service-port}}"
+							],
+							"path": [
+								"api",
+								"products"
+							]
+						},
+						"description": "Пустое название и отрицательная цена должны отклоняться валидацией."
+					},
+					"response": []
+				},
+				{
+					"name": "get Product By Id",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {",
+									"    const api = new API(pm);",
+									"    const rnd = new RandomUtils();",
+									"",
+									"    const category = await api.createCategory(rnd.getCategory());",
+									"    const product = await api.createProduct(rnd.getProduct(category.id));",
+									"",
+									"    pm.collectionVariables.set('product_id', product.id);",
+									"    pm.collectionVariables.set('product', JSON.stringify(product));",
+									"};",
+									"",
+									"const interval = setInterval(() => {}, 1000);",
+									"",
+									"setTimeout(async () => {",
+									"    try {",
+									"        await main();",
+									"    } catch (e) {",
+									"        console.error(e);",
+									"    } finally {",
+									"        clearInterval(interval);",
+									"    }",
+									"}, 100);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 200', function () {",
+									"    pm.expect(pm.response.code).to.equal(200);",
+									"});",
+									"",
+									"pm.test('Возвращается запрошенный товар', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const product = JSON.parse(pm.collectionVariables.get('product'));",
+									"",
+									"    pm.expect(responseJson.id, 'Поле id').to.equal(product.id);",
+									"    pm.expect(responseJson.name, 'Поле name').to.equal(product.name);",
+									"    pm.expect(responseJson.description, 'Поле description').to.equal(product.description);",
+									"    pm.expect(Number(responseJson.price), 'Поле price').to.be.closeTo(Number(product.price), 0.011);",
+									"    pm.expect(responseJson.imageUrl, 'Поле imageUrl').to.equal(product.imageUrl);",
+									"    pm.expect(responseJson.active, 'Поле active').to.equal(true);",
+									"    pm.expect(responseJson.category, 'Поле category').to.be.an('object');",
+									"    pm.expect(responseJson.category.id, 'Поле category.id').to.equal(product.category.id);",
+									"});",
+									"",
+									"['product', 'product_id'].forEach(key => pm.collectionVariables.unset(key));"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}{{product-service-port}}/api/products/{{product_id}}",
+							"host": [
+								"{{baseUrl}}{{product-service-port}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"{{product_id}}"
+							]
+						},
+						"description": "Получить подробную информацию о товаре."
+					},
+					"response": []
+				},
+				{
+					"name": "get Product By Unknown Id",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const rnd = new RandomUtils();",
+									"",
+									"pm.collectionVariables.set('unknown_id', rnd.getUnknownId());"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 404 для несуществующего товара', function () {",
+									"    pm.expect(pm.response.code).to.equal(404);",
+									"});",
+									"",
+									"['unknown_id'].forEach(key => pm.collectionVariables.unset(key));"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}{{product-service-port}}/api/products/{{unknown_id}}",
+							"host": [
+								"{{baseUrl}}{{product-service-port}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"{{unknown_id}}"
+							]
+						},
+						"description": "Запрос несуществующего товара должен возвращать 404."
+					},
+					"response": []
+				},
+				{
+					"name": "get Products",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {",
+									"    const api = new API(pm);",
+									"    const rnd = new RandomUtils();",
+									"",
+									"    const category = await api.createCategory(rnd.getCategory());",
+									"    const product = await api.createProduct(rnd.getProduct(category.id));",
+									"",
+									"    pm.collectionVariables.set('product', JSON.stringify(product));",
+									"};",
+									"",
+									"const interval = setInterval(() => {}, 1000);",
+									"",
+									"setTimeout(async () => {",
+									"    try {",
+									"        await main();",
+									"    } catch (e) {",
+									"        console.error(e);",
+									"    } finally {",
+									"        clearInterval(interval);",
+									"    }",
+									"}, 100);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 200', function () {",
+									"    pm.expect(pm.response.code).to.equal(200);",
+									"});",
+									"",
+									"pm.test('Каталог содержит созданный товар', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const product = JSON.parse(pm.collectionVariables.get('product'));",
+									"",
+									"    pm.expect(responseJson, 'Тело ответа').to.be.an('array').that.is.not.empty;",
+									"",
+									"    const found = responseJson.find(item => item.id === product.id);",
+									"    pm.expect(found, 'Созданный товар отсутствует в каталоге').to.not.be.undefined;",
+									"    pm.expect(found.name, 'Поле name').to.equal(product.name);",
+									"});",
+									"",
+									"pm.test('Каталог содержит только активные товары', function () {",
+									"    const responseJson = pm.response.json();",
+									"",
+									"    const inactive = responseJson.filter(item => item.active === false);",
+									"    pm.expect(inactive, 'В каталоге не должно быть неактивных товаров').to.be.an('array').that.is.empty;",
+									"});",
+									"",
+									"['product'].forEach(key => pm.collectionVariables.unset(key));"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}{{product-service-port}}/api/products",
+							"host": [
+								"{{baseUrl}}{{product-service-port}}"
+							],
+							"path": [
+								"api",
+								"products"
+							]
+						},
+						"description": "Получить список всех активных товаров."
+					},
+					"response": []
+				},
+				{
+					"name": "get Products By Category",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {",
+									"    const api = new API(pm);",
+									"    const rnd = new RandomUtils();",
+									"",
+									"    const category = await api.createCategory(rnd.getCategory());",
+									"    const first = await api.createProduct(rnd.getProduct(category.id));",
+									"    const second = await api.createProduct(rnd.getProduct(category.id));",
+									"",
+									"    pm.collectionVariables.set('category_id', category.id);",
+									"    pm.collectionVariables.set('product_ids', JSON.stringify([first.id, second.id]));",
+									"};",
+									"",
+									"const interval = setInterval(() => {}, 1000);",
+									"",
+									"setTimeout(async () => {",
+									"    try {",
+									"        await main();",
+									"    } catch (e) {",
+									"        console.error(e);",
+									"    } finally {",
+									"        clearInterval(interval);",
+									"    }",
+									"}, 100);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 200', function () {",
+									"    pm.expect(pm.response.code).to.equal(200);",
+									"});",
+									"",
+									"pm.test('Возвращаются товары только указанной категории', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const categoryId = Number(pm.collectionVariables.get('category_id'));",
+									"    const productIds = JSON.parse(pm.collectionVariables.get('product_ids'));",
+									"",
+									"    pm.expect(responseJson, 'Тело ответа').to.be.an('array').with.lengthOf(productIds.length);",
+									"",
+									"    productIds.forEach((id) => {",
+									"        const found = responseJson.find(item => item.id === id);",
+									"        pm.expect(found, 'Товар с id=' + id + ' отсутствует в списке').to.not.be.undefined;",
+									"    });",
+									"",
+									"    const alien = responseJson.filter(item => !item.category || item.category.id !== categoryId);",
+									"    pm.expect(alien, 'В списке присутствуют товары чужих категорий').to.be.an('array').that.is.empty;",
+									"});",
+									"",
+									"['category_id', 'product_ids'].forEach(key => pm.collectionVariables.unset(key));"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}{{product-service-port}}/api/products/category/{{category_id}}",
+							"host": [
+								"{{baseUrl}}{{product-service-port}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"category",
+								"{{category_id}}"
+							]
+						},
+						"description": "Получить товары выбранной категории."
+					},
+					"response": []
+				},
+				{
+					"name": "search Products",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {",
+									"    const api = new API(pm);",
+									"    const rnd = new RandomUtils();",
+									"",
+									"    const category = await api.createCategory(rnd.getCategory());",
+									"    const product = await api.createProduct(rnd.getProduct(category.id));",
+									"",
+									"    pm.collectionVariables.set('product', JSON.stringify(product));",
+									"    pm.collectionVariables.set('search_query', product.name.split(' ').pop());",
+									"};",
+									"",
+									"const interval = setInterval(() => {}, 1000);",
+									"",
+									"setTimeout(async () => {",
+									"    try {",
+									"        await main();",
+									"    } catch (e) {",
+									"        console.error(e);",
+									"    } finally {",
+									"        clearInterval(interval);",
+									"    }",
+									"}, 100);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 200', function () {",
+									"    pm.expect(pm.response.code).to.equal(200);",
+									"});",
+									"",
+									"pm.test('Поиск находит товар по части названия', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const product = JSON.parse(pm.collectionVariables.get('product'));",
+									"    const query = pm.collectionVariables.get('search_query').toLowerCase();",
+									"",
+									"    pm.expect(responseJson, 'Тело ответа').to.be.an('array').that.is.not.empty;",
+									"",
+									"    const found = responseJson.find(item => item.id === product.id);",
+									"    pm.expect(found, 'Товар не найден по фрагменту названия').to.not.be.undefined;",
+									"",
+									"    const alien = responseJson.filter(item => !item.name.toLowerCase().includes(query));",
+									"    pm.expect(alien, 'В выдаче присутствуют товары без совпадения по названию').to.be.an('array').that.is.empty;",
+									"});",
+									"",
+									"['product', 'search_query'].forEach(key => pm.collectionVariables.unset(key));"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}{{product-service-port}}/api/products/search?query={{search_query}}",
+							"host": [
+								"{{baseUrl}}{{product-service-port}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"search"
+							],
+							"query": [
+								{
+									"key": "query",
+									"value": "{{search_query}}"
+								}
+							]
+						},
+						"description": "Поиск товаров по частичному совпадению названия."
+					},
+					"response": []
+				},
+				{
+					"name": "update Product",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {",
+									"    const api = new API(pm);",
+									"    const rnd = new RandomUtils();",
+									"",
+									"    const category = await api.createCategory(rnd.getCategory());",
+									"    const product = await api.createProduct(rnd.getProduct(category.id));",
+									"",
+									"    const patch = {",
+									"        name: 'Обновлённый товар ' + rnd.getWord(8),",
+									"        description: 'Обновлённое описание ' + rnd.getWord(8),",
+									"        price: rnd.getPrice()",
+									"    };",
+									"",
+									"    pm.collectionVariables.set('product_id', product.id);",
+									"    pm.collectionVariables.set('product', JSON.stringify(product));",
+									"    pm.collectionVariables.set('patch', JSON.stringify(patch));",
+									"",
+									"    setBody(pm, patch);",
+									"};",
+									"",
+									"const interval = setInterval(() => {}, 1000);",
+									"",
+									"setTimeout(async () => {",
+									"    try {",
+									"        await main();",
+									"    } catch (e) {",
+									"        console.error(e);",
+									"    } finally {",
+									"        clearInterval(interval);",
+									"    }",
+									"}, 100);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 200', function () {",
+									"    pm.expect(pm.response.code).to.equal(200);",
+									"});",
+									"",
+									"pm.test('Переданные поля обновлены', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const patch = JSON.parse(pm.collectionVariables.get('patch'));",
+									"    const product = JSON.parse(pm.collectionVariables.get('product'));",
+									"",
+									"    pm.expect(responseJson.id, 'Поле id').to.equal(product.id);",
+									"    pm.expect(responseJson.name, 'Поле name').to.equal(patch.name);",
+									"    pm.expect(responseJson.description, 'Поле description').to.equal(patch.description);",
+									"    pm.expect(Number(responseJson.price), 'Поле price').to.be.closeTo(patch.price, 0.011);",
+									"});",
+									"",
+									"pm.test('Непереданные поля сохранили прежние значения', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const product = JSON.parse(pm.collectionVariables.get('product'));",
+									"",
+									"    pm.expect(responseJson.imageUrl, 'Поле imageUrl').to.equal(product.imageUrl);",
+									"    pm.expect(responseJson.active, 'Поле active').to.equal(true);",
+									"    pm.expect(responseJson.category, 'Поле category').to.be.an('object');",
+									"    pm.expect(responseJson.category.id, 'Поле category.id').to.equal(product.category.id);",
+									"});",
+									"",
+									"['product', 'product_id', 'patch'].forEach(key => pm.collectionVariables.unset(key));"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}{{product-service-port}}/api/products/{{product_id}}",
+							"host": [
+								"{{baseUrl}}{{product-service-port}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"{{product_id}}"
+							]
+						},
+						"description": "Частичное обновление информации о товаре."
+					},
+					"response": []
+				},
+				{
+					"name": "deactivate Product",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {",
+									"    const api = new API(pm);",
+									"    const rnd = new RandomUtils();",
+									"",
+									"    const category = await api.createCategory(rnd.getCategory());",
+									"    const product = await api.createProduct(rnd.getProduct(category.id));",
+									"",
+									"    pm.collectionVariables.set('product_id', product.id);",
+									"    pm.collectionVariables.set('product', JSON.stringify(product));",
+									"",
+									"    setBody(pm, { active: false });",
+									"};",
+									"",
+									"const interval = setInterval(() => {}, 1000);",
+									"",
+									"setTimeout(async () => {",
+									"    try {",
+									"        await main();",
+									"    } catch (e) {",
+									"        console.error(e);",
+									"    } finally {",
+									"        clearInterval(interval);",
+									"    }",
+									"}, 100);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 200', function () {",
+									"    pm.expect(pm.response.code).to.equal(200);",
+									"});",
+									"",
+									"pm.test('Товар деактивирован', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const product = JSON.parse(pm.collectionVariables.get('product'));",
+									"",
+									"    pm.expect(responseJson.id, 'Поле id').to.equal(product.id);",
+									"    pm.expect(responseJson.active, 'Поле active').to.equal(false);",
+									"    pm.expect(responseJson.name, 'Поле name').to.equal(product.name);",
+									"});",
+									"",
+									"['product', 'product_id'].forEach(key => pm.collectionVariables.unset(key));"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}{{product-service-port}}/api/products/{{product_id}}",
+							"host": [
+								"{{baseUrl}}{{product-service-port}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"{{product_id}}"
+							]
+						},
+						"description": "Снять товар с продажи через частичное обновление."
+					},
+					"response": []
+				},
+				{
+					"name": "get Products Without Deactivated",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {",
+									"    const api = new API(pm);",
+									"    const rnd = new RandomUtils();",
+									"",
+									"    const category = await api.createCategory(rnd.getCategory());",
+									"    const active = await api.createProduct(rnd.getProduct(category.id));",
+									"    const deactivated = await api.createProduct(rnd.getProduct(category.id));",
+									"",
+									"    await api.updateProduct(deactivated.id, { active: false });",
+									"",
+									"    pm.collectionVariables.set('active_product_id', active.id);",
+									"    pm.collectionVariables.set('deactivated_product_id', deactivated.id);",
+									"};",
+									"",
+									"const interval = setInterval(() => {}, 1000);",
+									"",
+									"setTimeout(async () => {",
+									"    try {",
+									"        await main();",
+									"    } catch (e) {",
+									"        console.error(e);",
+									"    } finally {",
+									"        clearInterval(interval);",
+									"    }",
+									"}, 100);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 200', function () {",
+									"    pm.expect(pm.response.code).to.equal(200);",
+									"});",
+									"",
+									"pm.test('Деактивированный товар исключён из каталога', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const activeId = Number(pm.collectionVariables.get('active_product_id'));",
+									"    const deactivatedId = Number(pm.collectionVariables.get('deactivated_product_id'));",
+									"",
+									"    pm.expect(responseJson, 'Тело ответа').to.be.an('array').that.is.not.empty;",
+									"    pm.expect(responseJson.find(item => item.id === activeId), 'Активный товар отсутствует в каталоге').to.not.be.undefined;",
+									"    pm.expect(responseJson.find(item => item.id === deactivatedId), 'Деактивированный товар не должен попадать в каталог').to.be.undefined;",
+									"});",
+									"",
+									"['active_product_id', 'deactivated_product_id'].forEach(key => pm.collectionVariables.unset(key));"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}{{product-service-port}}/api/products",
+							"host": [
+								"{{baseUrl}}{{product-service-port}}"
+							],
+							"path": [
+								"api",
+								"products"
+							]
+						},
+						"description": "Каталог не должен содержать снятые с продажи товары."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "inventory-service",
+			"item": [
+				{
+					"name": "create Inventory",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const rnd = new RandomUtils();",
+									"",
+									"const item = rnd.getInventoryItem();",
+									"pm.collectionVariables.set('inventory_item', JSON.stringify(item));",
+									"",
+									"setBody(pm, item);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 200 или 201', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+									"});",
+									"",
+									"pm.test('Запись об остатках создана', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const item = JSON.parse(pm.collectionVariables.get('inventory_item'));",
+									"",
+									"    pm.expect(responseJson.id, 'Поле id').to.be.a('number');",
+									"    pm.expect(responseJson.productId, 'Поле productId').to.equal(item.productId);",
+									"    pm.expect(responseJson.quantity, 'Поле quantity').to.equal(item.quantity);",
+									"    pm.expect(responseJson.reservedQuantity, 'У новой записи ничего не зарезервировано').to.equal(0);",
+									"    pm.expect(responseJson.availableQuantity, 'availableQuantity = quantity - reservedQuantity').to.equal(item.quantity);",
+									"});",
+									"",
+									"['inventory_item'].forEach(key => pm.collectionVariables.unset(key));"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}{{inventory-service-port}}/api/inventory",
+							"host": [
+								"{{baseUrl}}{{inventory-service-port}}"
+							],
+							"path": [
+								"api",
+								"inventory"
+							]
+						},
+						"description": "Создать запись об остатках для нового товара."
+					},
+					"response": []
+				},
+				{
+					"name": "create Inventory For Existing Product",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {",
+									"    const api = new API(pm);",
+									"    const rnd = new RandomUtils();",
+									"",
+									"    const item = rnd.getInventoryItem();",
+									"    await api.createInventory(item);",
+									"",
+									"    setBody(pm, item);",
+									"};",
+									"",
+									"const interval = setInterval(() => {}, 1000);",
+									"",
+									"setTimeout(async () => {",
+									"    try {",
+									"        await main();",
+									"    } catch (e) {",
+									"        console.error(e);",
+									"    } finally {",
+									"        clearInterval(interval);",
+									"    }",
+									"}, 100);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Повторное создание записи об остатках отклоняется', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([400, 409]);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}{{inventory-service-port}}/api/inventory",
+							"host": [
+								"{{baseUrl}}{{inventory-service-port}}"
+							],
+							"path": [
+								"api",
+								"inventory"
+							]
+						},
+						"description": "Для уже существующего товара нужно использовать PUT, а не POST."
+					},
+					"response": []
+				},
+				{
+					"name": "create Inventory With Invalid Data",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"setBody(pm, { quantity: -10 });"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 400 при нарушении правил валидации', function () {",
+									"    pm.expect(pm.response.code).to.equal(400);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}{{inventory-service-port}}/api/inventory",
+							"host": [
+								"{{baseUrl}}{{inventory-service-port}}"
+							],
+							"path": [
+								"api",
+								"inventory"
+							]
+						},
+						"description": "Отсутствие productId и отрицательное количество должны отклоняться валидацией."
+					},
+					"response": []
+				},
+				{
+					"name": "get Inventory By Product Id",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {",
+									"    const api = new API(pm);",
+									"    const rnd = new RandomUtils();",
+									"",
+									"    const inventory = await api.createInventory(rnd.getInventoryItem());",
+									"",
+									"    pm.collectionVariables.set('product_id', inventory.productId);",
+									"    pm.collectionVariables.set('inventory', JSON.stringify(inventory));",
+									"};",
+									"",
+									"const interval = setInterval(() => {}, 1000);",
+									"",
+									"setTimeout(async () => {",
+									"    try {",
+									"        await main();",
+									"    } catch (e) {",
+									"        console.error(e);",
+									"    } finally {",
+									"        clearInterval(interval);",
+									"    }",
+									"}, 100);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 200', function () {",
+									"    pm.expect(pm.response.code).to.equal(200);",
+									"});",
+									"",
+									"pm.test('Возвращаются остатки запрошенного товара', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const inventory = JSON.parse(pm.collectionVariables.get('inventory'));",
+									"",
+									"    pm.expect(responseJson.productId, 'Поле productId').to.equal(inventory.productId);",
+									"    pm.expect(responseJson.quantity, 'Поле quantity').to.equal(inventory.quantity);",
+									"    pm.expect(responseJson.reservedQuantity, 'Поле reservedQuantity').to.equal(0);",
+									"    pm.expect(responseJson.availableQuantity, 'Поле availableQuantity').to.equal(inventory.quantity);",
+									"});",
+									"",
+									"['inventory', 'product_id'].forEach(key => pm.collectionVariables.unset(key));"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}{{inventory-service-port}}/api/inventory/{{product_id}}",
+							"host": [
+								"{{baseUrl}}{{inventory-service-port}}"
+							],
+							"path": [
+								"api",
+								"inventory",
+								"{{product_id}}"
+							]
+						},
+						"description": "Получить остатки по конкретному товару."
+					},
+					"response": []
+				},
+				{
+					"name": "get Inventory By Unknown Product Id",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const rnd = new RandomUtils();",
+									"",
+									"pm.collectionVariables.set('unknown_id', rnd.getExternalProductId());"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 404 для товара без записи об остатках', function () {",
+									"    pm.expect(pm.response.code).to.equal(404);",
+									"});",
+									"",
+									"['unknown_id'].forEach(key => pm.collectionVariables.unset(key));"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}{{inventory-service-port}}/api/inventory/{{unknown_id}}",
+							"host": [
+								"{{baseUrl}}{{inventory-service-port}}"
+							],
+							"path": [
+								"api",
+								"inventory",
+								"{{unknown_id}}"
+							]
+						},
+						"description": "Запрос остатков несуществующего товара должен возвращать 404."
+					},
+					"response": []
+				},
+				{
+					"name": "get All Inventory",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {",
+									"    const api = new API(pm);",
+									"    const rnd = new RandomUtils();",
+									"",
+									"    const inventory = await api.createInventory(rnd.getInventoryItem());",
+									"",
+									"    pm.collectionVariables.set('inventory', JSON.stringify(inventory));",
+									"};",
+									"",
+									"const interval = setInterval(() => {}, 1000);",
+									"",
+									"setTimeout(async () => {",
+									"    try {",
+									"        await main();",
+									"    } catch (e) {",
+									"        console.error(e);",
+									"    } finally {",
+									"        clearInterval(interval);",
+									"    }",
+									"}, 100);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 200', function () {",
+									"    pm.expect(pm.response.code).to.equal(200);",
+									"});",
+									"",
+									"pm.test('Список остатков содержит созданную запись', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const inventory = JSON.parse(pm.collectionVariables.get('inventory'));",
+									"",
+									"    pm.expect(responseJson, 'Тело ответа').to.be.an('array').that.is.not.empty;",
+									"",
+									"    const found = responseJson.find(item => item.productId === inventory.productId);",
+									"    pm.expect(found, 'Созданная запись отсутствует в списке').to.not.be.undefined;",
+									"    pm.expect(found.quantity, 'Поле quantity').to.equal(inventory.quantity);",
+									"});",
+									"",
+									"['inventory'].forEach(key => pm.collectionVariables.unset(key));"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}{{inventory-service-port}}/api/inventory",
+							"host": [
+								"{{baseUrl}}{{inventory-service-port}}"
+							],
+							"path": [
+								"api",
+								"inventory"
+							]
+						},
+						"description": "Получить остатки по всем товарам."
+					},
+					"response": []
+				},
+				{
+					"name": "update Inventory",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {",
+									"    const api = new API(pm);",
+									"    const rnd = new RandomUtils();",
+									"",
+									"    const inventory = await api.createInventory(rnd.getInventoryItem());",
+									"    const update = { productId: inventory.productId, quantity: inventory.quantity + 50 };",
+									"",
+									"    pm.collectionVariables.set('update', JSON.stringify(update));",
+									"",
+									"    setBody(pm, update);",
+									"};",
+									"",
+									"const interval = setInterval(() => {}, 1000);",
+									"",
+									"setTimeout(async () => {",
+									"    try {",
+									"        await main();",
+									"    } catch (e) {",
+									"        console.error(e);",
+									"    } finally {",
+									"        clearInterval(interval);",
+									"    }",
+									"}, 100);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 200', function () {",
+									"    pm.expect(pm.response.code).to.equal(200);",
+									"});",
+									"",
+									"pm.test('Количество товара на складе обновлено', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const update = JSON.parse(pm.collectionVariables.get('update'));",
+									"",
+									"    pm.expect(responseJson.productId, 'Поле productId').to.equal(update.productId);",
+									"    pm.expect(responseJson.quantity, 'Поле quantity').to.equal(update.quantity);",
+									"    pm.expect(responseJson.reservedQuantity, 'Поле reservedQuantity').to.equal(0);",
+									"    pm.expect(responseJson.availableQuantity, 'Поле availableQuantity').to.equal(update.quantity);",
+									"});",
+									"",
+									"['update'].forEach(key => pm.collectionVariables.unset(key));"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}{{inventory-service-port}}/api/inventory",
+							"host": [
+								"{{baseUrl}}{{inventory-service-port}}"
+							],
+							"path": [
+								"api",
+								"inventory"
+							]
+						},
+						"description": "Обновить количество товара на складе."
+					},
+					"response": []
+				},
+				{
+					"name": "update Inventory For Unknown Product",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const rnd = new RandomUtils();",
+									"",
+									"setBody(pm, rnd.getInventoryItem());"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 404 при обновлении несуществующей записи', function () {",
+									"    pm.expect(pm.response.code).to.equal(404);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}{{inventory-service-port}}/api/inventory",
+							"host": [
+								"{{baseUrl}}{{inventory-service-port}}"
+							],
+							"path": [
+								"api",
+								"inventory"
+							]
+						},
+						"description": "PUT не создаёт запись: для несуществующего товара должен возвращаться 404."
+					},
+					"response": []
+				},
+				{
+					"name": "reserve Stock",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {",
+									"    const api = new API(pm);",
+									"    const rnd = new RandomUtils();",
+									"",
+									"    const inventory = await api.createInventory(rnd.getInventoryItem(null, 100));",
+									"    const reserve = { productId: inventory.productId, quantity: 10 };",
+									"",
+									"    pm.collectionVariables.set('inventory', JSON.stringify(inventory));",
+									"    pm.collectionVariables.set('reserve', JSON.stringify(reserve));",
+									"",
+									"    setBody(pm, reserve);",
+									"};",
+									"",
+									"const interval = setInterval(() => {}, 1000);",
+									"",
+									"setTimeout(async () => {",
+									"    try {",
+									"        await main();",
+									"    } catch (e) {",
+									"        console.error(e);",
+									"    } finally {",
+									"        clearInterval(interval);",
+									"    }",
+									"}, 100);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 200', function () {",
+									"    pm.expect(pm.response.code).to.equal(200);",
+									"});",
+									"",
+									"pm.test('Товар зарезервирован', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const inventory = JSON.parse(pm.collectionVariables.get('inventory'));",
+									"    const reserve = JSON.parse(pm.collectionVariables.get('reserve'));",
+									"",
+									"    pm.expect(responseJson.success, 'Поле success').to.equal(true);",
+									"    pm.expect(responseJson.availableQuantity, 'Поле availableQuantity').to.equal(inventory.quantity - reserve.quantity);",
+									"    pm.expect(responseJson.message, 'Поле message').to.be.a('string').that.is.not.empty;",
+									"});",
+									"",
+									"['inventory', 'reserve'].forEach(key => pm.collectionVariables.unset(key));"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}{{inventory-service-port}}/api/inventory/reserve",
+							"host": [
+								"{{baseUrl}}{{inventory-service-port}}"
+							],
+							"path": [
+								"api",
+								"inventory",
+								"reserve"
+							]
+						},
+						"description": "Зарезервировать товар на складе."
+					},
+					"response": []
+				},
+				{
+					"name": "reserve Stock Twice",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {",
+									"    const api = new API(pm);",
+									"    const rnd = new RandomUtils();",
+									"",
+									"    const inventory = await api.createInventory(rnd.getInventoryItem(null, 100));",
+									"    await api.reserveStock({ productId: inventory.productId, quantity: 30 });",
+									"",
+									"    const reserve = { productId: inventory.productId, quantity: 20 };",
+									"",
+									"    pm.collectionVariables.set('expected_available', inventory.quantity - 30 - reserve.quantity);",
+									"",
+									"    setBody(pm, reserve);",
+									"};",
+									"",
+									"const interval = setInterval(() => {}, 1000);",
+									"",
+									"setTimeout(async () => {",
+									"    try {",
+									"        await main();",
+									"    } catch (e) {",
+									"        console.error(e);",
+									"    } finally {",
+									"        clearInterval(interval);",
+									"    }",
+									"}, 100);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 200', function () {",
+									"    pm.expect(pm.response.code).to.equal(200);",
+									"});",
+									"",
+									"pm.test('Резервы суммируются', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const expectedAvailable = Number(pm.collectionVariables.get('expected_available'));",
+									"",
+									"    pm.expect(responseJson.success, 'Поле success').to.equal(true);",
+									"    pm.expect(responseJson.availableQuantity, 'Повторный резерв должен уменьшать доступное количество').to.equal(expectedAvailable);",
+									"});",
+									"",
+									"['expected_available'].forEach(key => pm.collectionVariables.unset(key));"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}{{inventory-service-port}}/api/inventory/reserve",
+							"host": [
+								"{{baseUrl}}{{inventory-service-port}}"
+							],
+							"path": [
+								"api",
+								"inventory",
+								"reserve"
+							]
+						},
+						"description": "Повторное резервирование должно уменьшать доступный остаток."
+					},
+					"response": []
+				},
+				{
+					"name": "get Inventory After Reserve",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {",
+									"    const api = new API(pm);",
+									"    const rnd = new RandomUtils();",
+									"",
+									"    const inventory = await api.createInventory(rnd.getInventoryItem(null, 100));",
+									"    await api.reserveStock({ productId: inventory.productId, quantity: 40 });",
+									"",
+									"    pm.collectionVariables.set('product_id', inventory.productId);",
+									"    pm.collectionVariables.set('inventory', JSON.stringify(inventory));",
+									"    pm.collectionVariables.set('reserved', 40);",
+									"};",
+									"",
+									"const interval = setInterval(() => {}, 1000);",
+									"",
+									"setTimeout(async () => {",
+									"    try {",
+									"        await main();",
+									"    } catch (e) {",
+									"        console.error(e);",
+									"    } finally {",
+									"        clearInterval(interval);",
+									"    }",
+									"}, 100);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 200', function () {",
+									"    pm.expect(pm.response.code).to.equal(200);",
+									"});",
+									"",
+									"pm.test('Резерв сохранён в записи об остатках', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const inventory = JSON.parse(pm.collectionVariables.get('inventory'));",
+									"    const reserved = Number(pm.collectionVariables.get('reserved'));",
+									"",
+									"    pm.expect(responseJson.quantity, 'Резервирование не должно менять общее количество').to.equal(inventory.quantity);",
+									"    pm.expect(responseJson.reservedQuantity, 'Поле reservedQuantity').to.equal(reserved);",
+									"    pm.expect(responseJson.availableQuantity, 'Поле availableQuantity').to.equal(inventory.quantity - reserved);",
+									"});",
+									"",
+									"['inventory', 'product_id', 'reserved'].forEach(key => pm.collectionVariables.unset(key));"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}{{inventory-service-port}}/api/inventory/{{product_id}}",
+							"host": [
+								"{{baseUrl}}{{inventory-service-port}}"
+							],
+							"path": [
+								"api",
+								"inventory",
+								"{{product_id}}"
+							]
+						},
+						"description": "После резервирования запись должна хранить зарезервированное количество."
+					},
+					"response": []
+				},
+				{
+					"name": "reserve More Than Available",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {",
+									"    const api = new API(pm);",
+									"    const rnd = new RandomUtils();",
+									"",
+									"    const inventory = await api.createInventory(rnd.getInventoryItem(null, 10));",
+									"",
+									"    setBody(pm, { productId: inventory.productId, quantity: inventory.quantity + 1 });",
+									"};",
+									"",
+									"const interval = setInterval(() => {}, 1000);",
+									"",
+									"setTimeout(async () => {",
+									"    try {",
+									"        await main();",
+									"    } catch (e) {",
+									"        console.error(e);",
+									"    } finally {",
+									"        clearInterval(interval);",
+									"    }",
+									"}, 100);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Резервирование сверх доступного количества отклоняется', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([400, 409]);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}{{inventory-service-port}}/api/inventory/reserve",
+							"host": [
+								"{{baseUrl}}{{inventory-service-port}}"
+							],
+							"path": [
+								"api",
+								"inventory",
+								"reserve"
+							]
+						},
+						"description": "Нельзя зарезервировать больше, чем доступно на складе."
+					},
+					"response": []
+				},
+				{
+					"name": "reserve Stock For Unknown Product",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const rnd = new RandomUtils();",
+									"",
+									"setBody(pm, { productId: rnd.getExternalProductId(), quantity: 1 });"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 404 для товара без записи об остатках', function () {",
+									"    pm.expect(pm.response.code).to.equal(404);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}{{inventory-service-port}}/api/inventory/reserve",
+							"host": [
+								"{{baseUrl}}{{inventory-service-port}}"
+							],
+							"path": [
+								"api",
+								"inventory",
+								"reserve"
+							]
+						},
+						"description": "Резервирование несуществующего товара должно возвращать 404."
+					},
+					"response": []
+				},
+				{
+					"name": "reserve Stock With Invalid Quantity",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {",
+									"    const api = new API(pm);",
+									"    const rnd = new RandomUtils();",
+									"",
+									"    const inventory = await api.createInventory(rnd.getInventoryItem());",
+									"",
+									"    setBody(pm, { productId: inventory.productId, quantity: 0 });",
+									"};",
+									"",
+									"const interval = setInterval(() => {}, 1000);",
+									"",
+									"setTimeout(async () => {",
+									"    try {",
+									"        await main();",
+									"    } catch (e) {",
+									"        console.error(e);",
+									"    } finally {",
+									"        clearInterval(interval);",
+									"    }",
+									"}, 100);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 400 при нарушении правил валидации', function () {",
+									"    pm.expect(pm.response.code).to.equal(400);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}{{inventory-service-port}}/api/inventory/reserve",
+							"host": [
+								"{{baseUrl}}{{inventory-service-port}}"
+							],
+							"path": [
+								"api",
+								"inventory",
+								"reserve"
+							]
+						},
+						"description": "Количество для резервирования должно быть не менее 1."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "order-service",
+			"item": [
+				{
+					"name": "create Order",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const rnd = new RandomUtils();",
+									"",
+									"const order = rnd.getOrder();",
+									"pm.collectionVariables.set('order', JSON.stringify(order));",
+									"",
+									"setBody(pm, order);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 200 или 201', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+									"});",
+									"",
+									"pm.test('Заказ создан и содержит корректные поля', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const order = JSON.parse(pm.collectionVariables.get('order'));",
+									"    const expectedTotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);",
+									"",
+									"    pm.expect(responseJson.id, 'Поле id').to.be.a('number');",
+									"    pm.expect(responseJson.customerName, 'Поле customerName').to.equal(order.customerName);",
+									"    pm.expect(responseJson.customerEmail, 'Поле customerEmail').to.equal(order.customerEmail);",
+									"    pm.expect(responseJson.status, 'Новый заказ должен иметь статус CREATED').to.equal('CREATED');",
+									"    pm.expect(responseJson.createdAt, 'Поле createdAt').to.exist;",
+									"    pm.expect(Number(responseJson.totalPrice), 'Поле totalPrice').to.be.closeTo(expectedTotal, 0.011);",
+									"});",
+									"",
+									"pm.test('Позиции заказа сохранены', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const order = JSON.parse(pm.collectionVariables.get('order'));",
+									"",
+									"    pm.expect(responseJson.items, 'Поле items').to.be.an('array').with.lengthOf(order.items.length);",
+									"",
+									"    order.items.forEach((expected) => {",
+									"        const actual = responseJson.items.find(item => item.productId === expected.productId);",
+									"        pm.expect(actual, 'Позиция с productId=' + expected.productId + ' отсутствует в заказе').to.not.be.undefined;",
+									"        pm.expect(actual.productName, 'Поле productName').to.equal(expected.productName);",
+									"        pm.expect(actual.quantity, 'Поле quantity').to.equal(expected.quantity);",
+									"        pm.expect(Number(actual.price), 'Поле price').to.be.closeTo(expected.price, 0.011);",
+									"    });",
+									"});",
+									"",
+									"['order'].forEach(key => pm.collectionVariables.unset(key));"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}{{order-service-port}}/api/orders",
+							"host": [
+								"{{baseUrl}}{{order-service-port}}"
+							],
+							"path": [
+								"api",
+								"orders"
+							]
+						},
+						"description": "Оформить заказ. На этом этапе order-service не обращается к другим сервисам."
+					},
+					"response": []
+				},
+				{
+					"name": "get Order By Id",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {",
+									"    const api = new API(pm);",
+									"    const rnd = new RandomUtils();",
+									"",
+									"    const order = await api.createOrder(rnd.getOrder());",
+									"",
+									"    pm.collectionVariables.set('order_id', order.id);",
+									"    pm.collectionVariables.set('order', JSON.stringify(order));",
+									"};",
+									"",
+									"const interval = setInterval(() => {}, 1000);",
+									"",
+									"setTimeout(async () => {",
+									"    try {",
+									"        await main();",
+									"    } catch (e) {",
+									"        console.error(e);",
+									"    } finally {",
+									"        clearInterval(interval);",
+									"    }",
+									"}, 100);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 200', function () {",
+									"    pm.expect(pm.response.code).to.equal(200);",
+									"});",
+									"",
+									"pm.test('Возвращается запрошенный заказ', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const order = JSON.parse(pm.collectionVariables.get('order'));",
+									"",
+									"    pm.expect(responseJson.id, 'Поле id').to.equal(order.id);",
+									"    pm.expect(responseJson.customerName, 'Поле customerName').to.equal(order.customerName);",
+									"    pm.expect(responseJson.customerEmail, 'Поле customerEmail').to.equal(order.customerEmail);",
+									"    pm.expect(responseJson.status, 'Поле status').to.equal(order.status);",
+									"    pm.expect(Number(responseJson.totalPrice), 'Поле totalPrice').to.be.closeTo(Number(order.totalPrice), 0.011);",
+									"    pm.expect(responseJson.items, 'Поле items').to.be.an('array').with.lengthOf(order.items.length);",
+									"});",
+									"",
+									"['order', 'order_id'].forEach(key => pm.collectionVariables.unset(key));"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}{{order-service-port}}/api/orders/{{order_id}}",
+							"host": [
+								"{{baseUrl}}{{order-service-port}}"
+							],
+							"path": [
+								"api",
+								"orders",
+								"{{order_id}}"
+							]
+						},
+						"description": "Получить заказ по идентификатору."
+					},
+					"response": []
+				},
+				{
+					"name": "get Order By Unknown Id",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const rnd = new RandomUtils();",
+									"",
+									"pm.collectionVariables.set('unknown_id', rnd.getUnknownId());"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 404 для несуществующего заказа', function () {",
+									"    pm.expect(pm.response.code).to.equal(404);",
+									"});",
+									"",
+									"['unknown_id'].forEach(key => pm.collectionVariables.unset(key));"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}{{order-service-port}}/api/orders/{{unknown_id}}",
+							"host": [
+								"{{baseUrl}}{{order-service-port}}"
+							],
+							"path": [
+								"api",
+								"orders",
+								"{{unknown_id}}"
+							]
+						},
+						"description": "Запрос несуществующего заказа должен возвращать 404."
+					},
+					"response": []
+				},
+				{
+					"name": "get Orders",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {",
+									"    const api = new API(pm);",
+									"    const rnd = new RandomUtils();",
+									"",
+									"    const order = await api.createOrder(rnd.getOrder());",
+									"",
+									"    pm.collectionVariables.set('order', JSON.stringify(order));",
+									"};",
+									"",
+									"const interval = setInterval(() => {}, 1000);",
+									"",
+									"setTimeout(async () => {",
+									"    try {",
+									"        await main();",
+									"    } catch (e) {",
+									"        console.error(e);",
+									"    } finally {",
+									"        clearInterval(interval);",
+									"    }",
+									"}, 100);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 200', function () {",
+									"    pm.expect(pm.response.code).to.equal(200);",
+									"});",
+									"",
+									"pm.test('Список заказов содержит созданный заказ', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const order = JSON.parse(pm.collectionVariables.get('order'));",
+									"",
+									"    pm.expect(responseJson, 'Тело ответа').to.be.an('array').that.is.not.empty;",
+									"",
+									"    const found = responseJson.find(item => item.id === order.id);",
+									"    pm.expect(found, 'Созданный заказ отсутствует в списке').to.not.be.undefined;",
+									"    pm.expect(found.customerEmail, 'Поле customerEmail').to.equal(order.customerEmail);",
+									"    pm.expect(found.items, 'Поле items').to.be.an('array').with.lengthOf(order.items.length);",
+									"});",
+									"",
+									"['order'].forEach(key => pm.collectionVariables.unset(key));"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}{{order-service-port}}/api/orders",
+							"host": [
+								"{{baseUrl}}{{order-service-port}}"
+							],
+							"path": [
+								"api",
+								"orders"
+							]
+						},
+						"description": "Получить список всех заказов."
+					},
+					"response": []
+				},
+				{
+					"name": "get Orders By Email",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {",
+									"    const api = new API(pm);",
+									"    const rnd = new RandomUtils();",
+									"",
+									"    const email = rnd.getEmail();",
+									"    const first = await api.createOrder(rnd.getOrder(email));",
+									"    const second = await api.createOrder(rnd.getOrder(email));",
+									"",
+									"    pm.collectionVariables.set('customer_email', email);",
+									"    pm.collectionVariables.set('order_ids', JSON.stringify([first.id, second.id]));",
+									"};",
+									"",
+									"const interval = setInterval(() => {}, 1000);",
+									"",
+									"setTimeout(async () => {",
+									"    try {",
+									"        await main();",
+									"    } catch (e) {",
+									"        console.error(e);",
+									"    } finally {",
+									"        clearInterval(interval);",
+									"    }",
+									"}, 100);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 200', function () {",
+									"    pm.expect(pm.response.code).to.equal(200);",
+									"});",
+									"",
+									"pm.test('Возвращаются только заказы указанного клиента', function () {",
+									"    const responseJson = pm.response.json();",
+									"    const email = pm.collectionVariables.get('customer_email');",
+									"    const orderIds = JSON.parse(pm.collectionVariables.get('order_ids'));",
+									"",
+									"    pm.expect(responseJson, 'Тело ответа').to.be.an('array').with.lengthOf(orderIds.length);",
+									"",
+									"    orderIds.forEach((id) => {",
+									"        const found = responseJson.find(item => item.id === id);",
+									"        pm.expect(found, 'Заказ с id=' + id + ' отсутствует в выдаче').to.not.be.undefined;",
+									"    });",
+									"",
+									"    const alien = responseJson.filter(item => item.customerEmail !== email);",
+									"    pm.expect(alien, 'В выдаче присутствуют заказы других клиентов').to.be.an('array').that.is.empty;",
+									"});",
+									"",
+									"['customer_email', 'order_ids'].forEach(key => pm.collectionVariables.unset(key));"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}{{order-service-port}}/api/orders/by-email?email={{customer_email}}",
+							"host": [
+								"{{baseUrl}}{{order-service-port}}"
+							],
+							"path": [
+								"api",
+								"orders",
+								"by-email"
+							],
+							"query": [
+								{
+									"key": "email",
+									"value": "{{customer_email}}"
+								}
+							]
+						},
+						"description": "Найти заказы клиента по email."
+					},
+					"response": []
+				},
+				{
+					"name": "create Order Without Items",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const rnd = new RandomUtils();",
+									"",
+									"const order = rnd.getOrder();",
+									"order.items = [];",
+									"",
+									"setBody(pm, order);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 400 для заказа без товаров', function () {",
+									"    pm.expect(pm.response.code).to.equal(400);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}{{order-service-port}}/api/orders",
+							"host": [
+								"{{baseUrl}}{{order-service-port}}"
+							],
+							"path": [
+								"api",
+								"orders"
+							]
+						},
+						"description": "Заказ должен содержать хотя бы один товар."
+					},
+					"response": []
+				},
+				{
+					"name": "create Order With Invalid Email",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const rnd = new RandomUtils();",
+									"",
+									"const order = rnd.getOrder();",
+									"order.customerEmail = 'not-an-email';",
+									"",
+									"setBody(pm, order);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 400 для некорректного email', function () {",
+									"    pm.expect(pm.response.code).to.equal(400);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}{{order-service-port}}/api/orders",
+							"host": [
+								"{{baseUrl}}{{order-service-port}}"
+							],
+							"path": [
+								"api",
+								"orders"
+							]
+						},
+						"description": "Email покупателя должен проходить проверку формата."
+					},
+					"response": []
+				},
+				{
+					"name": "create Order With Invalid Item",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const rnd = new RandomUtils();",
+									"",
+									"const order = rnd.getOrder(null, 1);",
+									"order.items[0].productName = '';",
+									"order.items[0].quantity = 0;",
+									"",
+									"setBody(pm, order);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Код ответа 400 при нарушении правил валидации позиции заказа', function () {",
+									"    pm.expect(pm.response.code).to.equal(400);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "*/*"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}{{order-service-port}}/api/orders",
+							"host": [
+								"{{baseUrl}}{{order-service-port}}"
+							],
+							"path": [
+								"api",
+								"orders"
+							]
+						},
+						"description": "Вложенные позиции заказа тоже должны проходить валидацию."
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					"// Сервисы поднимаются на случайных портах (server.port: 0),",
+					"// поэтому реальный порт каждого сервиса берём из Eureka.",
+					"const eurekaHost = 'http://localhost:8761';",
+					"const appNames = ['product-service', 'order-service', 'inventory-service'];",
+					"const unresolvedPort = '12345';",
+					"",
+					"appNames.forEach((appName) => {",
+					"    if (String(pm.collectionVariables.get(appName + '-port')) !== unresolvedPort) {",
+					"        return;",
+					"    }",
+					"",
+					"    pm.sendRequest({",
+					"        url: eurekaHost + '/eureka/v2/apps/' + appName,",
+					"        method: 'GET',",
+					"        header: { 'Accept': 'application/json' }",
+					"    }, function (err, res) {",
+					"        if (err) {",
+					"            console.error('Ошибка запроса к Eureka: ', err);",
+					"            return;",
+					"        }",
+					"",
+					"        if (res.code !== 200) {",
+					"            console.error('Не удалось получить данные из Eureka для ' + appName + '. Статус: ', res.code);",
+					"            return;",
+					"        }",
+					"",
+					"        const jsonData = res.json();",
+					"        const instance = jsonData.application.instance[0];",
+					"",
+					"        if (!instance) {",
+					"            console.error('Инстанс сервиса ' + appName + ' не зарегистрирован в Eureka.');",
+					"            return;",
+					"        }",
+					"",
+					"        pm.collectionVariables.set(appName + '-port', instance.port['$']);",
+					"    });",
+					"});",
+					"",
+					"",
+					"// Подставляет тело запроса. Объявляется без const/let, чтобы быть доступным",
+					"// в pre-request скриптах отдельных запросов. Объект pm передаётся аргументом:",
+					"// у каждого скрипта свой экземпляр pm, и правки чужого экземпляра будут потеряны.",
+					"setBody = function (postman, body) {",
+					"    postman.request.body.update({",
+					"        mode: 'raw',",
+					"        raw: JSON.stringify(body),",
+					"        options: { raw: { language: 'json' } }",
+					"    });",
+					"};",
+					"",
+					"",
+					"API = class {",
+					"    constructor(postman, verbose = false) {",
+					"        this.pm = postman;",
+					"        this._verbose = verbose;",
+					"    }",
+					"",
+					"    async createCategory(category, verbose = null) {",
+					"        return this.post('/api/categories', category, 'Ошибка при создании категории: ', verbose);",
+					"    }",
+					"",
+					"    async getCategories(verbose = null) {",
+					"        return this.get('/api/categories', 'Ошибка при получении списка категорий: ', verbose);",
+					"    }",
+					"",
+					"    async createProduct(product, verbose = null) {",
+					"        return this.post('/api/products', product, 'Ошибка при создании товара: ', verbose);",
+					"    }",
+					"",
+					"    async updateProduct(productId, patch, verbose = null) {",
+					"        return this.patch('/api/products/' + productId, patch, 'Ошибка при обновлении товара: ', verbose);",
+					"    }",
+					"",
+					"    async getProduct(productId, verbose = null) {",
+					"        return this.get('/api/products/' + productId, 'Ошибка при получении товара: ', verbose);",
+					"    }",
+					"",
+					"    async createInventory(item, verbose = null) {",
+					"        return this.post('/api/inventory', item, 'Ошибка при создании записи об остатках: ', verbose);",
+					"    }",
+					"",
+					"    async updateInventory(item, verbose = null) {",
+					"        return this.put('/api/inventory', item, 'Ошибка при обновлении остатков: ', verbose);",
+					"    }",
+					"",
+					"    async getInventory(productId, verbose = null) {",
+					"        return this.get('/api/inventory/' + productId, 'Ошибка при получении остатков: ', verbose);",
+					"    }",
+					"",
+					"    async reserveStock(request, verbose = null) {",
+					"        return this.post('/api/inventory/reserve', request, 'Ошибка при резервировании товара: ', verbose);",
+					"    }",
+					"",
+					"    async createOrder(order, verbose = null) {",
+					"        return this.post('/api/orders', order, 'Ошибка при создании заказа: ', verbose);",
+					"    }",
+					"",
+					"    async getOrder(orderId, verbose = null) {",
+					"        return this.get('/api/orders/' + orderId, 'Ошибка при получении заказа: ', verbose);",
+					"    }",
+					"",
+					"    async post(path, body, errorText = 'Ошибка при выполнении post-запроса: ', verbose = null) {",
+					"        return this.sendRequest('POST', path, body, errorText, verbose);",
+					"    }",
+					"",
+					"    async put(path, body, errorText = 'Ошибка при выполнении put-запроса: ', verbose = null) {",
+					"        return this.sendRequest('PUT', path, body, errorText, verbose);",
+					"    }",
+					"",
+					"    async patch(path, body, errorText = 'Ошибка при выполнении patch-запроса: ', verbose = null) {",
+					"        return this.sendRequest('PATCH', path, body, errorText, verbose);",
+					"    }",
+					"",
+					"    async get(path, errorText = 'Ошибка при выполнении get-запроса: ', verbose = null) {",
+					"        return this.sendRequest('GET', path, null, errorText, verbose);",
+					"    }",
+					"",
+					"    baseUrlFor(path) {",
+					"        const resource = path.split('?')[0].split('/')[2];",
+					"        const baseUrl = pm.collectionVariables.get('baseUrl');",
+					"",
+					"        switch (resource) {",
+					"            case 'products':",
+					"            case 'categories':",
+					"                return baseUrl + pm.collectionVariables.get('product-service-port');",
+					"            case 'orders':",
+					"                return baseUrl + pm.collectionVariables.get('order-service-port');",
+					"            case 'inventory':",
+					"                return baseUrl + pm.collectionVariables.get('inventory-service-port');",
+					"            default:",
+					"                throw new Error('Неизвестный ресурс в пути запроса: ' + path);",
+					"        }",
+					"    }",
+					"",
+					"    async sendRequest(method, path, body = null, errorText = 'Ошибка при выполнении запроса: ', verbose = null) {",
+					"        return new Promise((resolve, reject) => {",
+					"            verbose = verbose == null ? this._verbose : verbose;",
+					"",
+					"            const request = {",
+					"                url: this.baseUrlFor(path) + path,",
+					"                method: method,",
+					"                body: body == null ? '' : JSON.stringify(body),",
+					"                header: { 'Content-Type': 'application/json' }",
+					"            };",
+					"",
+					"            if (verbose) {",
+					"                console.log('Отправляю запрос: ', request);",
+					"            }",
+					"",
+					"            try {",
+					"                this.pm.sendRequest(request, (error, response) => {",
+					"                    if (error || (response.code >= 400 && response.code <= 599)) {",
+					"                        const err = error ? error : JSON.stringify(response.json());",
+					"                        console.error('При выполнении запроса к серверу возникла ошибка.', err,",
+					"                            'Для отладки проблемы повторите такой же запрос к вашей программе ' +",
+					"                            'на локальном компьютере. Данные запроса: ', JSON.stringify(request));",
+					"",
+					"                        reject(new Error(errorText + err));",
+					"                        return;",
+					"                    }",
+					"",
+					"                    if (verbose) {",
+					"                        console.log('Результат обработки запроса: код состояния - ', response.code);",
+					"                    }",
+					"",
+					"                    if (response.stream.length === 0) {",
+					"                        resolve('');",
+					"                    } else {",
+					"                        resolve(response.json());",
+					"                    }",
+					"                });",
+					"            } catch (err) {",
+					"                if (verbose) {",
+					"                    console.error(errorText, err);",
+					"                }",
+					"                reject(err);",
+					"            }",
+					"        });",
+					"    }",
+					"};",
+					"",
+					"",
+					"RandomUtils = class {",
+					"    constructor() {}",
+					"",
+					"    productNames = [",
+					"        'Умная лампа', 'Датчик движения', 'Контроллер освещения',",
+					"        'Термометр', 'Розетка Wi-Fi', 'Светодиодная лента',",
+					"        'Камера наблюдения', 'Умный замок', 'Зарядное устройство'",
+					"    ];",
+					"",
+					"    descriptions = [",
+					"        'Высококачественный продукт для умного дома.',",
+					"        'Легко интегрируется с другими устройствами.',",
+					"        'Обеспечивает надёжную работу 24/7.',",
+					"        'Простой в установке и использовании.',",
+					"        'Современный дизайн и высокая производительность.'",
+					"    ];",
+					"",
+					"    categoryNames = [",
+					"        'Освещение', 'Безопасность', 'Климат',",
+					"        'Управление', 'Бытовая техника', 'Энергоснабжение'",
+					"    ];",
+					"",
+					"    customerNames = [",
+					"        'Иван Петров', 'Мария Кузнецова', 'Алексей Смирнов', 'Ольга Соколова',",
+					"        'Дмитрий Попов', 'Татьяна Козлова', 'Николай Морозов', 'Анна Волкова'",
+					"    ];",
+					"",
+					"    getItem(list) {",
+					"        return list[Math.floor(Math.random() * list.length)];",
+					"    }",
+					"",
+					"    getWord(length = 1) {",
+					"        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';",
+					"        let result = '';",
+					"        let counter = 0;",
+					"        while (counter < length) {",
+					"            result += characters.charAt(Math.floor(Math.random() * characters.length));",
+					"            counter += 1;",
+					"        }",
+					"        return result;",
+					"    }",
+					"",
+					"    getPrice(min = 7, max = 1000) {",
+					"        return Number((Math.random() * (max - min) + min).toFixed(2));",
+					"    }",
+					"",
+					"    getQuantity(min = 1, max = 5) {",
+					"        return Math.floor(Math.random() * (max - min + 1)) + min;",
+					"    }",
+					"",
+					"    // Идентификатор, которого заведомо нет в базе: начальные данные занимают id 1..12.",
+					"    getUnknownId() {",
+					"        return Math.floor(Math.random() * 900000000) + 100000000;",
+					"    }",
+					"",
+					"    // На этом этапе inventory-service и order-service не проверяют товар в product-service,",
+					"    // поэтому productId можно генерировать независимо.",
+					"    getExternalProductId() {",
+					"        return Math.floor(Math.random() * 900000000) + 100000000;",
+					"    }",
+					"",
+					"    getEmail() {",
+					"        return this.getWord(10).toLowerCase() + '@smart-home-test.ru';",
+					"    }",
+					"",
+					"    getCategory() {",
+					"        return {",
+					"            name: this.getItem(this.categoryNames) + ' ' + this.getWord(8),",
+					"            description: this.getItem(this.descriptions)",
+					"        };",
+					"    }",
+					"",
+					"    getProduct(categoryId = null) {",
+					"        const product = {",
+					"            name: this.getItem(this.productNames) + ' ' + this.getWord(8),",
+					"            description: this.getItem(this.descriptions),",
+					"            price: this.getPrice(),",
+					"            imageUrl: 'https://cdn.smart-home.test/' + this.getWord(8) + '.png'",
+					"        };",
+					"",
+					"        if (categoryId !== null) {",
+					"            product.categoryId = categoryId;",
+					"        }",
+					"",
+					"        return product;",
+					"    }",
+					"",
+					"    getInventoryItem(productId = null, quantity = null) {",
+					"        return {",
+					"            productId: productId === null ? this.getExternalProductId() : productId,",
+					"            quantity: quantity === null ? this.getQuantity(50, 200) : quantity",
+					"        };",
+					"    }",
+					"",
+					"    getOrderItem() {",
+					"        return {",
+					"            productId: this.getExternalProductId(),",
+					"            productName: this.getItem(this.productNames) + ' ' + this.getWord(8),",
+					"            quantity: this.getQuantity(1, 5),",
+					"            price: this.getPrice()",
+					"        };",
+					"    }",
+					"",
+					"    getOrder(email = null, itemsCount = 2) {",
+					"        const items = [];",
+					"        for (let i = 0; i < itemsCount; i += 1) {",
+					"            items.push(this.getOrderItem());",
+					"        }",
+					"",
+					"        return {",
+					"            customerName: this.getItem(this.customerNames),",
+					"            customerEmail: email === null ? this.getEmail() : email,",
+					"            items: items",
+					"        };",
+					"    }",
+					"};"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:"
+		},
+		{
+			"key": "product-service-port",
+			"value": "12345"
+		},
+		{
+			"key": "order-service-port",
+			"value": "12345"
+		},
+		{
+			"key": "inventory-service-port",
+			"value": "12345"
+		}
+	]
+}

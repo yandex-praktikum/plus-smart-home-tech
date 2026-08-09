@@ -52,15 +52,16 @@ print_gateway_routes() {
 
 print_gateway_routes
 
-if [[ -f "${COLLECTIONS_DIR}/postman.json" ]]; then
- echo "▶️ Запуск 7-spring-cloud-microservices коллекции..."
- newman run "${COLLECTIONS_DIR}/postman.json" \
-   --delay-request 50 -r cli,htmlextra \
-   --verbose --color on --reporter-htmlextra-darkTheme \
-   --reporter-htmlextra-export "${REPORTS_DIR}/7-spring-cloud-microservices.html" \
-   --reporter-htmlextra-title "Отчет по тестам основного сервиса" \
-   --reporter-htmlextra-logs true \
-   --reporter-htmlextra-template "$TEMPLATE_PATH"
-else
- echo "ℹ️ Коллекция 7-spring-cloud-microservices не найдена для ветки $BRANCH_NAME — пропуск."
+if [[ ! -f "${COLLECTIONS_DIR}/postman.json" ]]; then
+ echo "❌ Ошибка: коллекция Postman не найдена: ${COLLECTIONS_DIR}/postman.json"
+ exit 1
 fi
+
+echo "▶️ Запуск ${BRANCH_NAME} коллекции..."
+newman run "${COLLECTIONS_DIR}/postman.json" \
+  --delay-request 50 -r cli,htmlextra \
+  --verbose --color on --reporter-htmlextra-darkTheme \
+  --reporter-htmlextra-export "${REPORTS_DIR}/${BRANCH_NAME}.html" \
+  --reporter-htmlextra-title "Отчет по тестам основного сервиса" \
+  --reporter-htmlextra-logs true \
+  --reporter-htmlextra-template "$TEMPLATE_PATH"

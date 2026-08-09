@@ -144,51 +144,48 @@ jobs:
         run: |
           mvn clean install -DskipTests --no-transfer-progress
 
+      # Для веток заданий этап равен имени ветки, а для интеграционной ветки develop
+      # он определяется по коду решения (телеметрия или микросервисы витрины).
+      # Результат кладём в BRANCH_NAME, его используют все скрипты ниже.
+      - name: Detect solution stage
+        id: stage
+        run: |
+          STAGE=$(${STUFF_PATH}/scripts/detect-stage.sh)
+          echo "✅ Определён этап решения: $STAGE"
+          echo "BRANCH_NAME=${STAGE}" >> $GITHUB_ENV
+          echo "stage=${STAGE}" >> $GITHUB_OUTPUT
+
       - name: Start infrastructure
         run: ${STUFF_PATH}/scripts/start-infra.sh
 
       - name: Verify JAR files and Start Telemetry Services
-        if: |
-          contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer", "develop"]'), github.ref_name) || 
-          contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer", "develop"]'), github.head_ref)
+        if: contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer", "develop"]'), env.BRANCH_NAME)
         run: ${STUFF_PATH}/scripts/start-telemetry.sh
 
       - name: Test Telemetry Services
         id: test
-        if: |
-          contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer", "develop"]'), github.ref_name) || 
-          contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer", "develop"]'), github.head_ref)
+        if: contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer", "develop"]'), env.BRANCH_NAME)
         run: ${STUFF_PATH}/scripts/run-tests.sh
         continue-on-error: false
 
       - name: Verify JAR files and Start Services
-        if: |
-          contains(fromJson('["7-spring-cloud-microservices"]'), github.ref_name) || 
-          contains(fromJson('["7-spring-cloud-microservices"]'), github.head_ref) ||
-          contains(fromJson('["7-microservices"]'), github.ref_name) || 
-          contains(fromJson('["7-microservices"]'), github.head_ref)
+        if: contains(fromJson('["7-spring-cloud-microservices", "7-microservices"]'), env.BRANCH_NAME)
         run: ${STUFF_PATH}/scripts/start-services.sh
 
       - name: Install Node
-        if: |
-          contains(fromJson('["7-spring-cloud-microservices"]'), github.ref_name) || 
-          contains(fromJson('["7-spring-cloud-microservices"]'), github.head_ref)
+        if: contains(fromJson('["7-spring-cloud-microservices", "7-microservices"]'), env.BRANCH_NAME)
         uses: actions/setup-node@v4
         with:
           node-version: '16.x'
 
       - name: Install newman
-        if: |
-          contains(fromJson('["7-spring-cloud-microservices"]'), github.ref_name) || 
-          contains(fromJson('["7-spring-cloud-microservices"]'), github.head_ref)
+        if: contains(fromJson('["7-spring-cloud-microservices", "7-microservices"]'), env.BRANCH_NAME)
         run: |
           npm install -g newman
           npm install -g newman-reporter-htmlextra
 
       - name: Run POSTMAN tests
-        if: |
-          contains(fromJson('["7-spring-cloud-microservices"]'), github.ref_name) || 
-          contains(fromJson('["7-spring-cloud-microservices"]'), github.head_ref)
+        if: contains(fromJson('["7-spring-cloud-microservices", "7-microservices"]'), env.BRANCH_NAME)
         run: ${STUFF_PATH}/scripts/run-postman-tests.sh
 
       - name: Capture Exit Status

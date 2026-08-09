@@ -1,6 +1,8 @@
 #!/bin/bash
 
-BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF##*/}}
+if [ -z "$BRANCH_NAME" ]; then
+  BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF##*/}}
+fi
 
 echo "Проверка наличия JAR-файлов и запуск нужных сервисов..."
 

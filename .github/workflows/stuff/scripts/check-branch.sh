@@ -29,6 +29,12 @@ check_target_branch() {
   fi
 }
 
+branch_exists() {
+  local branch=$1
+  gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" \
+    "/repos/${GITHUB_REPOSITORY}/branches/${branch}" > /dev/null 2>&1
+}
+
 case "$BRANCH_NAME" in
   "1-collector-json")
     echo "✅ Collector json service - OK"
@@ -55,7 +61,14 @@ case "$BRANCH_NAME" in
 
   "develop")
     echo "✅ Develop branch - OK"
+    # develop собирается дважды: после 4-analyzer (телеметрия)
+    # и после ветки микросервисов (7-spring-cloud-microservices или 7-microservices)
     check_prerequisite_branch "develop" "4-analyzer" 6
+    for microservices_branch in "7-spring-cloud-microservices" "7-microservices"; do
+      if branch_exists "$microservices_branch"; then
+        check_prerequisite_branch "develop" "$microservices_branch" 6
+      fi
+    done
     check_target_branch "main"
     ;;
 
@@ -74,13 +87,13 @@ case "$BRANCH_NAME" in
   "7-spring-cloud-microservices")
     echo "✅ Cloud microservices - OK"
     check_prerequisite_branch "7-spring-cloud-microservices" "6-discovery-server" 9
-    check_target_branch "main"
+    check_target_branch "develop"
     ;;
 
   "7-microservices")
     echo "✅ Microservices - OK"
     check_prerequisite_branch "7-microservices" "6-discovery-server" 9
-    check_target_branch "main"
+    check_target_branch "develop"
     ;;
 
   "8-gateway")
