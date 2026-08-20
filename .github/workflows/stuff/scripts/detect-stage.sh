@@ -12,12 +12,6 @@
 #   * иначе в ветке только телеметрия (этап 4-analyzer)
 #     -> "develop" (запускаем текущие тесты hub-router).
 #
-# Важно: в шаблоне репозитория (ветка main) модули микросервисов магазина уже присутствуют
-# как заготовки — pom.xml, класс с @SpringBootApplication, DTO, обработчик ошибок и пустые
-# package-info.java с TODO. Такие заготовки не являются решением, поэтому сервис считается
-# реализованным, только если в нём есть код прикладных слоёв (контроллеры, сущности,
-# репозитории, сервисы, feign-клиенты).
-#
 # Результат печатается в stdout, диагностика — в stderr.
 
 set -e
@@ -53,49 +47,19 @@ service_dirs() {
   } | sort -u
 }
 
-# Признаки того, что в модуле есть прикладной код, а не только заготовка из шаблона.
-# В шаблоне лежат лишь класс приложения, DTO (record) и @RestControllerAdvice,
-# поэтому \b в конце шаблонов важен: он не даёт @RestController совпасть
-# с @RestControllerAdvice.
-IMPLEMENTATION_MARKERS='@(RestController|Controller|RequestMapping|Entity|Repository|Service|FeignClient|KafkaListener)\b|(Jpa|Crud|PagingAndSorting|Mongo)Repository[<[:space:]]'
-
-# Каталоги с исходниками, по которым определяем наличие реализации:
-# тесты не учитываем — в шаблоне уже лежат приёмочные тесты.
-service_sources() {
-  local dir=$1
-
-  if [ -d "$dir/src/main" ]; then
-    echo "$dir/src/main"
-  else
-    echo "$dir"
-  fi
-}
-
-# Сервис считается реализованным, если в его каталоге есть Spring Boot приложение
-# и код прикладных слоёв. Пустой модуль-заготовка (только pom.xml) и заготовка
-# из шаблона (приложение + DTO + TODO в package-info.java) под это условие не подходят.
+# Сервис считается реализованным, если в его каталоге есть Spring Boot приложение.
+# Пустой модуль-заготовка (только pom.xml) под это условие не подходит.
 has_service() {
   local name=$1
-  local dir src
-  local scaffolding=""
+  local dir
 
   while IFS= read -r dir; do
     [ -z "$dir" ] && continue
-    src=$(service_sources "$dir")
-
-    grep -rlq --include="*.java" --include="*.kt" "@SpringBootApplication" "$src" 2>/dev/null || continue
-
-    if grep -rlqE --include="*.java" --include="*.kt" "$IMPLEMENTATION_MARKERS" "$src" 2>/dev/null; then
+    if grep -rlq --include="*.java" "@SpringBootApplication" "$dir" 2>/dev/null; then
       log "   ✔ $name: $dir"
       return 0
     fi
-
-    scaffolding="$dir"
   done <<< "$(service_dirs "$name")"
-
-  if [ -n "$scaffolding" ]; then
-    log "   ✖ $name: $scaffolding — только заготовка из шаблона, реализации нет"
-  fi
 
   return 1
 }
@@ -112,7 +76,7 @@ has_all_services() {
   done
 
   if [ ${#missing[@]} -ne 0 ]; then
-    log "   ✖ нет реализации сервисов: ${missing[*]}"
+    log "   ✖ не найдены сервисы: ${missing[*]}"
     return 1
   fi
 
@@ -132,7 +96,7 @@ detect_stage_by_code() {
     return 0
   fi
 
-  log "🔎 Реализованных микросервисов не найдено — в решении только телеметрия (этап 4-analyzer)"
+  log "🔎 Микросервисов не найдено — в решении только телеметрия (этап 4-analyzer)"
   echo "develop"
 }
 

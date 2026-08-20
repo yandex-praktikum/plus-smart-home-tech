@@ -196,6 +196,13 @@ check_runtime() {
 
 echo "🔧 Проверка Spring Cloud Config (режим: $MODE, ветка: ${BRANCH_NAME:-${GITHUB_HEAD_REF:-${GITHUB_REF##*/}}})"
 
+case "$CONFIG_BRANCH" in
+  5-config-server | 6-discovery-server)
+    cfg_info "ℹ️  На этом этапе в задании только сервисы телеметрии — микросервисы витрины появляются с этапа 7,"
+    cfg_info "   поэтому конфигурация для них не требуется, даже если заготовки модулей уже созданы."
+    ;;
+esac
+
 case "$MODE" in
   static)
     check_config_server_module

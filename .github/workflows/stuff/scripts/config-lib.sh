@@ -20,6 +20,15 @@ CONFIG_PROFILE=${CONFIG_PROFILE:-default}
 # Модули инфраструктуры, которые не обязаны быть клиентами config-server.
 CONFIG_CLIENT_EXCLUDES=${CONFIG_CLIENT_EXCLUDES:-"config-server discovery-server eureka-server registry-server hub-router tester"}
 
+# Этап решения. Нужен, чтобы не требовать конфигурацию для сервисов, которые
+# по программе курса появляются позже текущего этапа.
+CONFIG_BRANCH="${CONFIG_BRANCH:-${BRANCH_NAME:-${GITHUB_HEAD_REF:-${GITHUB_REF##*/}}}}"
+
+# Микросервисы витрины/магазина и gateway появляются в проекте начиная с этапа 7.
+# На этапах 5 и 6 в задании только телеметрия, поэтому заготовки этих модулей
+# (если студент завёл их заранее) не обязаны быть клиентами config-server.
+LATE_STAGE_SERVICES=${LATE_STAGE_SERVICES:-"shopping-store shopping-cart warehouse order payment delivery product-service order-service inventory-service web-ui gateway gateway-server api-gateway"}
+
 # Файл со списком запущенных сервисов: <имя приложения>\t<файл лога>\t<имя модуля>
 STARTED_SERVICES_FILE="${STARTED_SERVICES_FILE:-${LOG_DIR}/started-services.tsv}"
 
@@ -114,6 +123,55 @@ cfg_norm_path() {
   echo "${path%/}"
 }
 
+# Модули, перечисленные в секции <modules> файла pom.xml
+cfg_pom_modules() {
+  awk '
+    /<modules>/     { inside = 1 }
+    /<\/modules>/   { inside = 0 }
+    inside && /<module>/ {
+      line = $0
+      sub(/.*<module>/, "", line)
+      sub(/<\/module>.*/, "", line)
+      gsub(/[ \t\r]/, "", line)
+      if (line != "") print line
+    }
+  ' "$1" 2>/dev/null
+}
+
+# Каталоги всех модулей maven-реактора, начиная с корневого pom.xml.
+# Пустой вывод означает, что корневой pom.xml не найден и фильтровать нечем.
+cfg_reactor_modules() {
+  local root
+  root=$(cfg_norm_path "$ROOT_DIR")
+  [ -n "$root" ] || root="."
+  [ -f "$root/pom.xml" ] || return 0
+
+  local queue=("$root")
+  local visited=""
+  local result=""
+  local current module child
+
+  while [ ${#queue[@]} -gt 0 ]; do
+    current=${queue[0]}
+    queue=("${queue[@]:1}")
+
+    case "$visited" in
+      *"|$current|"*) continue ;;
+    esac
+    visited="${visited}|${current}|"
+    result="${result}${current}"$'\n'
+
+    while IFS= read -r module; do
+      [ -n "$module" ] || continue
+      child=$(cfg_norm_path "$current/$module")
+      [ -f "$child/pom.xml" ] || continue
+      queue+=("$child")
+    done <<< "$(cfg_pom_modules "$current/pom.xml")"
+  done
+
+  printf '%s' "$result" | sort -u
+}
+
 # Каталог maven-модуля, которому принадлежит файл
 cfg_module_root_of() {
   local dir
@@ -130,15 +188,25 @@ cfg_module_root_of() {
   return 1
 }
 
-# Каталоги всех модулей, содержащих Spring Boot приложение
+# Каталоги всех модулей, содержащих Spring Boot приложение.
+# Учитываются только модули maven-реактора: случайные каталоги с исходниками,
+# не подключённые к сборке (черновики, эксперименты), сервисами проекта не являются.
 cfg_spring_boot_modules() {
+  local reactor
+  reactor=$(cfg_reactor_modules)
+
   find "$ROOT_DIR" -name pom.xml -not -path "*/target/*" -not -path "*/.git/*" 2>/dev/null \
     | while IFS= read -r pom; do
         local dir
-        dir=$(dirname "$pom")
+        dir=$(cfg_norm_path "$(dirname "$pom")")
+
+        if [ -n "$reactor" ] && ! grep -qxF "$dir" <<< "$reactor"; then
+          continue
+        fi
+
         [ -d "$dir/src/main" ] || continue
         if grep -rq --include="*.java" --include="*.kt" "@SpringBootApplication" "$dir/src/main" 2>/dev/null; then
-          cfg_norm_path "$dir"
+          echo "$dir"
         fi
       done | sort -u
 }
@@ -277,6 +345,30 @@ cfg_module_has_dependency() {
   [ -f "pom.xml" ] && grep -q "<artifactId>${artifact}</artifactId>" "pom.xml" 2>/dev/null
 }
 
+# На этапах 5 и 6 задание охватывает только телеметрию: микросервисы витрины/магазина
+# и gateway появляются начиная с этапа 7. Возвращает 0, если модуль относится
+# к более поздним этапам и на текущем этапе не обязан быть клиентом config-server.
+cfg_is_out_of_stage_module() {
+  local dir=$1
+  local base
+
+  case "$CONFIG_BRANCH" in
+    5-config-server | 6-discovery-server) ;;
+    *) return 1 ;;
+  esac
+
+  base=$(basename "$dir")
+  case " $LATE_STAGE_SERVICES " in
+    *" $base "*) return 0 ;;
+  esac
+
+  case "/$dir/" in
+    */commerce/*) return 0 ;;
+  esac
+
+  return 1
+}
+
 # Сервисы, которые обязаны быть клиентами config-server.
 # Формат вывода: <каталог модуля>\t<имя приложения>
 cfg_required_config_clients() {
@@ -292,6 +384,8 @@ cfg_required_config_clients() {
     case " $CONFIG_CLIENT_EXCLUDES " in
       *" $base "*) continue ;;
     esac
+
+    cfg_is_out_of_stage_module "$dir" && continue
 
     name=$(cfg_module_app_name "$dir")
     printf '%s\t%s\n' "$dir" "$name"
