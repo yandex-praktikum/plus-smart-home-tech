@@ -8,8 +8,8 @@
 # конфигурацию из config-server.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-# shellcheck source=./config-lib.sh
-source "${SCRIPT_DIR}/config-lib.sh"
+# shellcheck source=./service-control.sh
+source "${SCRIPT_DIR}/service-control.sh"
 
 # Проверка переменных окружения и установка значений по умолчанию
 if [ -z "$BRANCH_NAME" ]; then
@@ -52,8 +52,13 @@ EUREKA_ENABLED=false
 # останутся сообщения Spring Cloud Config Client о загрузке конфигурации.
 CONFIG_CLIENT_ARGS="--logging.level.org.springframework.cloud.config=DEBUG"
 
-# Список запущенных сервисов создаём заново при каждом запуске
+# Ускоряем обновление реестра Eureka у клиентов: тесты отказоустойчивости гасят и
+# поднимают сервисы, и соседи должны узнавать об этом быстро, а не через 30 секунд.
+DISCOVERY_CLIENT_ARGS="--eureka.client.registry-fetch-interval-seconds=5 --eureka.instance.lease-renewal-interval-in-seconds=5"
+
+# Списки запущенных сервисов создаём заново при каждом запуске
 : > "$STARTED_SERVICES_FILE"
+: > "$SERVICE_COMMANDS_FILE"
 
 # Функция поиска правильного JAR'ника
 find_jar() {
@@ -90,15 +95,18 @@ resolve_app_name() {
 
 check_eureka_registration() {
   local service_name=$1
+  local attempts=${2:-12}
+  local i
+
   echo "⏳ Проверка регистрации $service_name в Eureka..."
 
-  for i in {1..12}; do
+  for ((i = 1; i <= attempts; i++)); do
     if curl -s -H "Accept: application/json" "${EUREKA_URL}/apps/$service_name" \
          | jq -e '.application.instance | if type=="array" then length > 0 else . != null end' > /dev/null 2>&1; then
       echo "✅ Сервис $service_name зарегистрирован в Eureka."
       return 0
     fi
-    echo "⏳ Ждём регистрации $service_name в Eureka... ($i/12)"
+    echo "⏳ Ждём регистрации $service_name в Eureka... ($i/$attempts)"
     sleep 5
   done
 
@@ -183,14 +191,17 @@ start_service() {
 
   local eureka_args=""
   if [ "$EUREKA_ENABLED" = "true" ]; then
-    eureka_args="--eureka.client.serviceUrl.defaultZone=${EUREKA_URL}/"
+    eureka_args="--eureka.client.serviceUrl.defaultZone=${EUREKA_URL}/ $DISCOVERY_CLIENT_ARGS"
   fi
 
+  # Команду запоминаем целиком, чтобы тесты отказоустойчивости могли перезапустить сервис
+  local command="java -jar \"$jar_path\" $extra_args $eureka_args --logging.file.name=\"$log_file\""
+
   echo "⏳ Запуск сервиса $service_name (имя приложения: $app_name)..."
-  nohup java -jar "$jar_path" $extra_args \
-        $eureka_args \
-        --logging.file.name="$log_file" \
-        > "$log_file" 2>&1 &
+  eval "nohup $command > \"$log_file\" 2>&1 &"
+  local pid=$!
+
+  svc_record "$service_name" "$app_name" "$pid" "$log_file" "$command"
 
   # В список для проверки клиентов config-server попадают только прикладные сервисы:
   # сам config-server и discovery-server клиентами быть не обязаны.
@@ -202,7 +213,7 @@ start_service() {
   sleep 15
   check_startup_errors "$service_name" "$log_file"
 
-  if ! pgrep -f "$jar_path" > /dev/null; then
+  if ! svc_is_running "$pid" && ! pgrep -f "$jar_path" > /dev/null; then
     echo "❌ Ошибка: Сервис $service_name не запустился. Проверьте логи: $log_file"
     cat "$log_file"
     exit 1
@@ -257,9 +268,18 @@ start_discovery_server() {
 }
 
 start_config_server() {
-  local registration_check=${1:-none}
+  start_service "config-server" "" "none"
 
-  start_service "config-server" "" "$registration_check"
+  # config-server можно поднимать двумя способами: на фиксированном порту
+  # или на случайном с регистрацией в Eureka. Ждать регистрации нужно только
+  # во втором случае — иначе адрес сервера конфигурации неоткуда взять.
+  local dir port
+  dir=$(cfg_config_server_dir 2>/dev/null)
+  [ -n "$dir" ] && port=$(cfg_module_server_port "$dir")
+
+  if [ "$EUREKA_ENABLED" = "true" ] && { [ -z "$port" ] || [ "$port" = "0" ]; }; then
+    check_eureka_registration "$(cfg_module_app_name "$dir")" || exit 1
+  fi
 
   local base_url
   base_url=$(cfg_config_server_url)
@@ -276,7 +296,7 @@ start_config_server() {
 
 start_platform_core() {
   start_discovery_server
-  start_config_server "eureka"
+  start_config_server
   sleep 5
 }
 
@@ -327,7 +347,7 @@ echo "Проверка наличия JAR-файлов и запуск нужн�
 # Логика запуска в зависимости от ветки
 case "$BRANCH_NAME" in
   "5-config-server")
-    start_config_server "none"
+    start_config_server
     start_telemetry_services "none"
 
     sleep 10

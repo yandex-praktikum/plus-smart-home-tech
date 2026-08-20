@@ -169,6 +169,10 @@ jobs:
         if: env.CONFIG_STAGE == 'true'
         run: ${STUFF_PATH}/scripts/check-config-server.sh static
 
+      - name: Check Circuit Breaker implementation
+        if: contains(fromJson('["9-circuit-breaker", "10-gateway-load-balancing", "11-security"]'), env.BRANCH_NAME)
+        run: ${STUFF_PATH}/scripts/check-circuit-breaker.sh
+
       - name: Verify JAR files and Start Telemetry Services
         if: contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer", "develop"]'), env.BRANCH_NAME)
         run: ${STUFF_PATH}/scripts/start-telemetry.sh
@@ -192,13 +196,13 @@ jobs:
         run: ${STUFF_PATH}/scripts/check-config-clients.sh
 
       - name: Install Node
-        if: contains(fromJson('["7-spring-cloud-microservices", "7-microservices", "8-open-feign"]'), env.BRANCH_NAME)
+        if: contains(fromJson('["7-spring-cloud-microservices", "7-microservices", "8-open-feign", "9-circuit-breaker"]'), env.BRANCH_NAME)
         uses: actions/setup-node@v4
         with:
           node-version: '16.x'
 
       - name: Install newman
-        if: contains(fromJson('["7-spring-cloud-microservices", "7-microservices", "8-open-feign"]'), env.BRANCH_NAME)
+        if: contains(fromJson('["7-spring-cloud-microservices", "7-microservices", "8-open-feign", "9-circuit-breaker"]'), env.BRANCH_NAME)
         run: |
           npm install -g newman
           npm install -g newman-reporter-htmlextra
@@ -206,6 +210,12 @@ jobs:
       - name: Run POSTMAN tests
         if: contains(fromJson('["7-spring-cloud-microservices", "7-microservices", "8-open-feign"]'), env.BRANCH_NAME)
         run: ${STUFF_PATH}/scripts/run-postman-tests.sh
+
+      # На этапе Circuit Breaker базовая коллекция запускается внутри сценария:
+      # он дополнительно гасит зависимости и проверяет деградацию и восстановление.
+      - name: Run Circuit Breaker tests
+        if: env.BRANCH_NAME == '9-circuit-breaker'
+        run: ${STUFF_PATH}/scripts/run-circuit-breaker-tests.sh
 
       - name: Capture Exit Status
         if: always()
