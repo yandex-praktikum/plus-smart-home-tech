@@ -194,14 +194,15 @@ check_runtime() {
 
 # --------------------------------------------------------------------------------------
 
-echo "🔧 Проверка Spring Cloud Config (режим: $MODE, ветка: ${BRANCH_NAME:-${GITHUB_HEAD_REF:-${GITHUB_REF##*/}}})"
+echo "🔧 Проверка Spring Cloud Config (режим: $MODE, этап: ${BRANCH_NAME:-${GITHUB_HEAD_REF:-${GITHUB_REF##*/}}})"
 
-case "$CONFIG_BRANCH" in
-  5-config-server | 6-discovery-server)
-    cfg_info "ℹ️  На этом этапе в задании только сервисы телеметрии — микросервисы витрины появляются с этапа 7,"
-    cfg_info "   поэтому конфигурация для них не требуется, даже если заготовки модулей уже созданы."
-    ;;
-esac
+# Проверяем только те модули, в которых уже есть реализация. Заготовки из precode
+# (пустые модули commerce и т.п.) на текущем этапе клиентами config-server быть не обязаны.
+STUB_MODULES=$(cfg_stub_modules 2>/dev/null)
+if [ -n "$STUB_MODULES" ]; then
+  cfg_info "ℹ️  Пропускаем модули без реализации (заготовки): $(echo "$STUB_MODULES" | tr '\n' ' ')"
+  cfg_info "   Конфигурация для них потребуется, когда в них появится код сервиса."
+fi
 
 case "$MODE" in
   static)

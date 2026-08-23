@@ -20,14 +20,12 @@ CONFIG_PROFILE=${CONFIG_PROFILE:-default}
 # Модули инфраструктуры, которые не обязаны быть клиентами config-server.
 CONFIG_CLIENT_EXCLUDES=${CONFIG_CLIENT_EXCLUDES:-"config-server discovery-server eureka-server registry-server hub-router tester"}
 
-# Этап решения. Нужен, чтобы не требовать конфигурацию для сервисов, которые
-# по программе курса появляются позже текущего этапа.
-CONFIG_BRANCH="${CONFIG_BRANCH:-${BRANCH_NAME:-${GITHUB_HEAD_REF:-${GITHUB_REF##*/}}}}"
-
-# Микросервисы витрины/магазина и gateway появляются в проекте начиная с этапа 7.
-# На этапах 5 и 6 в задании только телеметрия, поэтому заготовки этих модулей
-# (если студент завёл их заранее) не обязаны быть клиентами config-server.
-LATE_STAGE_SERVICES=${LATE_STAGE_SERVICES:-"shopping-store shopping-cart warehouse order payment delivery product-service order-service inventory-service web-ui gateway gateway-server api-gateway"}
+# Признаки того, что в модуле есть собственная реализация, а не заготовка из precode.
+# В заготовке лежат только класс приложения, DTO, обработчик ошибок и пустые package-info,
+# поэтому ни одной из этих аннотаций в ней нет.
+# Важно: "@RestControllerAdvice" под шаблон не подходит — после имени аннотации
+# обязательно должен идти не-буквенный символ.
+CONFIG_IMPL_MARKERS=${CONFIG_IMPL_MARKERS:-'@(RestController|Controller|Entity|Embeddable|Service|Repository|Component|Configuration|Bean|FeignClient|KafkaListener|Scheduled|Enable[A-Za-z]+)([^A-Za-z]|$)'}
 
 # Файл со списком запущенных сервисов: <имя приложения>\t<файл лога>\t<имя модуля>
 STARTED_SERVICES_FILE="${STARTED_SERVICES_FILE:-${LOG_DIR}/started-services.tsv}"
@@ -345,28 +343,38 @@ cfg_module_has_dependency() {
   [ -f "pom.xml" ] && grep -q "<artifactId>${artifact}</artifactId>" "pom.xml" 2>/dev/null
 }
 
-# На этапах 5 и 6 задание охватывает только телеметрию: микросервисы витрины/магазина
-# и gateway появляются начиная с этапа 7. Возвращает 0, если модуль относится
-# к более поздним этапам и на текущем этапе не обязан быть клиентом config-server.
-cfg_is_out_of_stage_module() {
-  local dir=$1
-  local base
+# В модуле есть собственная реализация?
+# Проверка не зависит от имени ветки: заготовки модулей из precode (пустые каталоги
+# controller/service/repository с package-info и TODO) реализацией не считаются.
+cfg_module_has_implementation() {
+  local dir=$1 file
 
-  case "$CONFIG_BRANCH" in
-    5-config-server | 6-discovery-server) ;;
-    *) return 1 ;;
-  esac
+  [ -n "$dir" ] || return 1
 
-  base=$(basename "$dir")
-  case " $LATE_STAGE_SERVICES " in
-    *" $base "*) return 0 ;;
-  esac
+  if [ -d "$dir/src/main" ] \
+     && grep -rqE --include="*.java" --include="*.kt" "$CONFIG_IMPL_MARKERS" "$dir/src/main" 2>/dev/null; then
+    return 0
+  fi
 
-  case "/$dir/" in
-    */commerce/*) return 0 ;;
-  esac
+  # Модули без бизнес-кода (например, gateway) описываются одной лишь конфигурацией
+  while IFS= read -r file; do
+    [ -n "$file" ] || continue
+    if grep -qE "gateway|routes:" "$file" 2>/dev/null; then
+      return 0
+    fi
+  done <<< "$(cfg_module_config_files "$dir")"
 
   return 1
+}
+
+# Модуль-заготовка: каталоги и класс приложения уже есть, но задание до него ещё не дошло.
+# Такие модули не обязаны быть клиентами config-server — иначе ветка develop,
+# в которой сделана только телеметрия, падала бы из-за пустых модулей commerce из precode.
+cfg_is_stub_module() {
+  local dir=$1
+
+  cfg_module_has_implementation "$dir" && return 1
+  return 0
 }
 
 # Сервисы, которые обязаны быть клиентами config-server.
@@ -385,10 +393,29 @@ cfg_required_config_clients() {
       *" $base "*) continue ;;
     esac
 
-    cfg_is_out_of_stage_module "$dir" && continue
+    cfg_is_stub_module "$dir" && continue
 
     name=$(cfg_module_app_name "$dir")
     printf '%s\t%s\n' "$dir" "$name"
+  done <<< "$(cfg_spring_boot_modules)"
+}
+
+# Модули-заготовки, пропущенные при проверке (для информационного вывода)
+cfg_stub_modules() {
+  local cs_dir dir base
+
+  cs_dir=$(cfg_config_server_dir 2>/dev/null)
+
+  while IFS= read -r dir; do
+    [ -n "$dir" ] || continue
+    [ -n "$cs_dir" ] && [ "$dir" = "$cs_dir" ] && continue
+
+    base=$(basename "$dir")
+    case " $CONFIG_CLIENT_EXCLUDES " in
+      *" $base "*) continue ;;
+    esac
+
+    cfg_is_stub_module "$dir" && echo "$dir"
   done <<< "$(cfg_spring_boot_modules)"
 }
 
