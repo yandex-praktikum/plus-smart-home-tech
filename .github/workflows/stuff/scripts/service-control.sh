@@ -126,6 +126,135 @@ svc_start() {
   echo "✅ Сервис $module запущен (pid=$pid)"
 }
 
+# --------------------------------------------------------------------------------------
+# Дополнительные экземпляры сервиса
+#
+# Нужны для проверки балансировки нагрузки: gateway должен распределять запросы
+# между всеми экземплярами сервиса, зарегистрированными в реестре.
+# --------------------------------------------------------------------------------------
+
+# Ключ, под которым дополнительный экземпляр записывается в $SERVICE_COMMANDS_FILE.
+# Отличается от имени модуля, поэтому svc_stop/svc_start основного экземпляра
+# продолжают работать с оригинальной записью.
+svc_replica_key() {
+  echo "$1-$2"
+}
+
+# Идентификатор экземпляра в Eureka задаём явно: иначе при остановке реплики
+# пришлось бы снимать с регистрации все экземпляры сервиса, включая живые.
+svc_replica_instance_id() {
+  echo "replica-$1-$2"
+}
+
+# Запускает ещё один экземпляр уже работающего сервиса той же командой.
+# Порт остаётся случайным (server.port: 0), поэтому экземпляры не конфликтуют,
+# а базу данных они делят намеренно — это одно и то же приложение.
+svc_start_replica() {
+  local module=$1
+  local suffix=${2:-2}
+  local command log_file replica_log instance_id key pid
+
+  command=$(svc_command "$module")
+  log_file=$(svc_log "$module")
+
+  if [ -z "$command" ]; then
+    echo "❌ Не найдена команда запуска сервиса $module"
+    return 1
+  fi
+
+  key=$(svc_replica_key "$module" "$suffix")
+  instance_id=$(svc_replica_instance_id "$module" "$suffix")
+  replica_log="${log_file%.log}-${suffix}.log"
+
+  # Экземпляры не должны писать в общие файлы: подменяем и лог приложения,
+  # и префикс access-лога — по нему считается распределение запросов.
+  command=${command//--logging.file.name=\"${log_file}\"/--logging.file.name=\"${replica_log}\"}
+  command=${command//--server.tomcat.accesslog.prefix=${module} /--server.tomcat.accesslog.prefix=${key} }
+  command="$command --eureka.instance.instance-id=${instance_id}"
+
+  echo "🚀 Запускаем дополнительный экземпляр сервиса $module ($key)..."
+  eval "nohup $command > \"$replica_log\" 2>&1 &"
+  pid=$!
+
+  svc_record "$key" "$(svc_app_name "$module")" "$pid" "$replica_log" "$command"
+
+  sleep 15
+  if ! svc_is_running "$pid"; then
+    echo "❌ Дополнительный экземпляр $key не запустился. Последние строки лога:"
+    tail -n 40 "$replica_log"
+    return 1
+  fi
+
+  echo "✅ Дополнительный экземпляр $key запущен (pid=$pid)"
+}
+
+# Останавливает дополнительный экземпляр, снимая с регистрации только его.
+svc_stop_replica() {
+  local module=$1
+  local suffix=${2:-2}
+  local key app pid i
+
+  key=$(svc_replica_key "$module" "$suffix")
+  pid=$(svc_pid "$key")
+  app=$(svc_app_name "$key")
+
+  if [ -z "$pid" ]; then
+    echo "ℹ️  Дополнительный экземпляр $key не запускался — останавливать нечего"
+    return 0
+  fi
+
+  echo "🛑 Останавливаем дополнительный экземпляр $key (pid=$pid)..."
+  curl -s -X DELETE "${EUREKA_URL}/apps/${app}/$(svc_replica_instance_id "$module" "$suffix")" > /dev/null 2>&1
+
+  kill "$pid" 2>/dev/null
+
+  for ((i = 0; i < 20; i++)); do
+    if ! svc_is_running "$pid"; then
+      echo "✅ Дополнительный экземпляр $key остановлен"
+      return 0
+    fi
+    sleep 1
+  done
+
+  echo "⚠️  Экземпляр $key не завершился штатно, отправляем SIGKILL"
+  kill -9 "$pid" 2>/dev/null
+  sleep 2
+  return 0
+}
+
+# Сколько экземпляров сервиса зарегистрировано в Eureka со статусом UP
+svc_instance_count() {
+  local app=$1
+
+  command -v jq > /dev/null 2>&1 || { echo 0; return 0; }
+
+  curl -s -H "Accept: application/json" "${EUREKA_URL}/apps/${app}" 2>/dev/null \
+    | jq -r '[.application.instance // [] | if type=="array" then .[] else . end
+             | select(.status == "UP")] | length' 2>/dev/null \
+    || echo 0
+}
+
+# Ждём, пока в реестре появится нужное число живых экземпляров сервиса
+svc_wait_instances() {
+  local app=$1
+  local expected=$2
+  local attempts=${3:-24}
+  local i count
+
+  for ((i = 1; i <= attempts; i++)); do
+    count=$(svc_instance_count "$app")
+    if [ "${count:-0}" -ge "$expected" ]; then
+      echo "✅ В Eureka зарегистрировано экземпляров $app: $count"
+      return 0
+    fi
+    echo "⏳ Ждём регистрации экземпляров $app: сейчас ${count:-0}, нужно $expected... ($i/$attempts)"
+    sleep 5
+  done
+
+  echo "❌ В Eureka так и не появилось $expected экземпляров сервиса $app"
+  return 1
+}
+
 # Ждём, пока сервис снова появится в Eureka со статусом UP
 svc_wait_registered() {
   local module=$1

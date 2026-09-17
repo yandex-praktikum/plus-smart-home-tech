@@ -29,15 +29,20 @@ TEMPLATE_PATH="${STUFF_PATH}/postman/dashboard-template.hbs"
 mkdir -p "$REPORTS_DIR"
 
 print_gateway_routes() {
-  local service_name="gateway-server"
+  local service_name SERVICE_URL metadata
 
-  echo "📡 Пробуем получить маршруты из $service_name через /actuator/gateway/routes..."
+  # Gateway в разных решениях называется по-разному — тот же список,
+  # что и в start-services.sh
+  for service_name in gateway-server api-gateway gateway; do
+    metadata=$(curl -s -H "Accept: application/json" "${EUREKA_URL}/apps/$service_name")
+    SERVICE_URL=$(echo "$metadata" | jq -r '.application.instance | if type=="array" then .[0] else . end | .homePageUrl // empty' 2>/dev/null)
+    [[ -n "$SERVICE_URL" ]] && break
+  done
 
-  local metadata=$(curl -s -H "Accept: application/json" "${EUREKA_URL}/apps/$service_name")
-  local SERVICE_URL=$(echo "$metadata" | jq -r '.application.instance | if type=="array" then .[0] else . end | .homePageUrl // empty')
+  echo "📡 Пробуем получить маршруты gateway через /actuator/gateway/routes..."
 
   if [[ -z "$SERVICE_URL" ]]; then
-    echo "⚠️ Не удалось получить URL сервиса gateway-server из Eureka. Пробуем использовать http://localhost:8080"
+    echo "⚠️ Не удалось получить URL gateway из Eureka. Пробуем использовать http://localhost:8080"
     SERVICE_URL="http://localhost:8080"
   fi
 

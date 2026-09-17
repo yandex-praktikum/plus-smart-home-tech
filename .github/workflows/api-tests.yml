@@ -174,6 +174,12 @@ jobs:
         if: contains(fromJson('["9-circuit-breaker", "10-gateway-load-balancing", "11-security"]'), env.BRANCH_NAME)
         run: ${STUFF_PATH}/scripts/check-circuit-breaker.sh
 
+      # Маршруты и схема lb:// проверяются по исходникам до запуска стенда:
+      # если балансировки нет в конфигурации, тесты этапа всё равно не пройдут.
+      - name: Check Gateway configuration
+        if: contains(fromJson('["10-gateway-load-balancing", "11-security"]'), env.BRANCH_NAME)
+        run: ${STUFF_PATH}/scripts/check-gateway.sh
+
       - name: Verify JAR files and Start Telemetry Services
         if: contains(fromJson('["1-collector-json", "2-collector-grpc", "3-aggregator", "4-analyzer", "develop"]'), env.BRANCH_NAME)
         run: ${STUFF_PATH}/scripts/start-telemetry.sh
@@ -197,13 +203,13 @@ jobs:
         run: ${STUFF_PATH}/scripts/check-config-clients.sh
 
       - name: Install Node
-        if: contains(fromJson('["7-spring-cloud-microservices", "7-microservices", "8-open-feign", "9-circuit-breaker"]'), env.BRANCH_NAME)
+        if: contains(fromJson('["7-spring-cloud-microservices", "7-microservices", "8-open-feign", "9-circuit-breaker", "10-gateway-load-balancing"]'), env.BRANCH_NAME)
         uses: actions/setup-node@v4
         with:
           node-version: '16.x'
 
       - name: Install newman
-        if: contains(fromJson('["7-spring-cloud-microservices", "7-microservices", "8-open-feign", "9-circuit-breaker"]'), env.BRANCH_NAME)
+        if: contains(fromJson('["7-spring-cloud-microservices", "7-microservices", "8-open-feign", "9-circuit-breaker", "10-gateway-load-balancing"]'), env.BRANCH_NAME)
         run: |
           npm install -g newman
           npm install -g newman-reporter-htmlextra
@@ -217,6 +223,13 @@ jobs:
       - name: Run Circuit Breaker tests
         if: env.BRANCH_NAME == '9-circuit-breaker'
         run: ${STUFF_PATH}/scripts/run-circuit-breaker-tests.sh
+
+      # На этапе Gateway базовая коллекция тоже запускается внутри сценария:
+      # все запросы идут через gateway, а сам сценарий дополнительно поднимает
+      # второй экземпляр сервиса и проверяет распределение нагрузки и отказ экземпляра.
+      - name: Run Gateway and Load Balancing tests
+        if: env.BRANCH_NAME == '10-gateway-load-balancing'
+        run: ${STUFF_PATH}/scripts/run-gateway-tests.sh
 
       - name: Capture Exit Status
         if: always()
@@ -234,6 +247,8 @@ jobs:
           path: |
             execution-report.txt
             ./logs/*.log
+            ./logs/access/*.log
+            ./reports/*.html
 
       - name: Fail if Tests Failed
         if: env.STATUS != 'success' && env.STATUS != 'skipped'

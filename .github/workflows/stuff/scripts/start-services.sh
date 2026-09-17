@@ -56,6 +56,30 @@ CONFIG_CLIENT_ARGS="--logging.level.org.springframework.cloud.config=DEBUG"
 # поднимают сервисы, и соседи должны узнавать об этом быстро, а не через 30 секунд.
 DISCOVERY_CLIENT_ARGS="--eureka.client.registry-fetch-interval-seconds=5 --eureka.instance.lease-renewal-interval-in-seconds=5"
 
+# Каталог access-логов Tomcat. Приложение не сообщает о себе в ответе, поэтому понять,
+# какой именно экземпляр сервиса обработал запрос, можно только по его собственному логу:
+# каждый экземпляр пишет свой файл, и по ним run-gateway-tests.sh считает,
+# как gateway распределил нагрузку.
+ACCESS_LOG_DIR="$(cd "$LOG_DIR" && pwd)/access"
+mkdir -p "$ACCESS_LOG_DIR"
+
+# Путь обязан быть абсолютным: относительный Tomcat разрешает от своего рабочего
+# каталога, а не от каталога запуска. Префикс идёт не последним аргументом —
+# svc_start_replica подменяет его в готовой команде запуска.
+access_log_args() {
+  echo "--server.tomcat.accesslog.enabled=true" \
+       "--server.tomcat.accesslog.directory=${ACCESS_LOG_DIR}" \
+       "--server.tomcat.accesslog.prefix=$1" \
+       "--server.tomcat.accesslog.suffix=.log" \
+       "--server.tomcat.accesslog.rotate=false" \
+       "--server.tomcat.accesslog.buffered=false"
+}
+
+# Диагностика gateway. Аргументы командной строки нужны только пайплайну и ничего
+# не требуют от решения: маршруты показываются через actuator, а укороченный TTL
+# кэша балансировщика позволяет не ждать полминуты, пока он заметит новый экземпляр.
+GATEWAY_ARGS="--management.endpoints.web.exposure.include=health,info,gateway --management.endpoint.gateway.enabled=true --spring.cloud.loadbalancer.cache.ttl=5s"
+
 # Списки запущенных сервисов создаём заново при каждом запуске
 : > "$STARTED_SERVICES_FILE"
 : > "$SERVICE_COMMANDS_FILE"
@@ -322,9 +346,19 @@ start_commerce_showcase_services() {
 
 # Микросервисы магазина (трек 7-microservices / 8-open-feign / 9-circuit-breaker / 10 / 11)
 start_commerce_shop_services() {
-  start_stateful_service "inventory-service" "inventory_db" "--spring.application.name=inventory-service $CONFIG_CLIENT_ARGS"
-  start_stateful_service "order-service" "order_db" "--spring.application.name=order-service $CONFIG_CLIENT_ARGS"
-  start_stateful_service "product-service" "product_db" "--spring.application.name=product-service $CONFIG_CLIENT_ARGS"
+  local service
+
+  for service in inventory-service order-service product-service; do
+    local db
+    case "$service" in
+      inventory-service) db="inventory_db" ;;
+      order-service)     db="order_db" ;;
+      product-service)   db="product_db" ;;
+    esac
+
+    start_stateful_service "$service" "$db" \
+      "--spring.application.name=$service $CONFIG_CLIENT_ARGS $(access_log_args "$service")"
+  done
 }
 
 # Gateway в разных решениях называется по-разному
@@ -333,7 +367,7 @@ start_gateway() {
 
   for module in gateway-server api-gateway gateway; do
     if [ -n "$(find_jar "$module")" ]; then
-      start_service "$module" "$CONFIG_CLIENT_ARGS" "http"
+      start_service "$module" "$CONFIG_CLIENT_ARGS $GATEWAY_ARGS" "http"
       return 0
     fi
   done
